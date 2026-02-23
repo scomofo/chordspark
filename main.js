@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
@@ -104,8 +105,9 @@ ipcMain.handle('stems:separate', async (event, filePath) => {
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
   return new Promise((resolve, reject) => {
-    // Spawn demucs: demucs.exe <model> <input> <output_dir>
-    demucsProcess = spawn(demucsBin, [modelFile, filePath, outputDir + path.sep], {
+    // Spawn demucs: demucs.exe <model> <input> <output_dir> <num_threads>
+    var numThreads = Math.max(1, Math.min(os.cpus().length, 8));
+    demucsProcess = spawn(demucsBin, [modelFile, filePath, outputDir + path.sep, String(numThreads)], {
       windowsHide: true
     });
 
