@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>ChordSpark</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="no-js" role="alert">
+<h2>ChordSpark needs a browser</h2>
+<p>This file must be opened in <b>Safari</b> or <b>Chrome</b>.</p>
+<p><b>iPhone:</b> Open Files app, find this file, tap Share, then <b>"Open in Safari"</b></p>
+<p><b>Android:</b> Open with <b>Chrome</b> from your file manager.</p>
+</div>
+<header class="header" id="header" style="display:none" role="banner">
+<div class="logo" onclick="S.screen='home';S.tab='practice';render()" tabindex="0" role="button" aria-label="ChordSpark home"><span>&#127928;</span><span class="logo-text">ChordSpark</span></div>
+<div class="hdr-stats">
+<button onclick="act('toggleDark')" style="background:none;font-size:16px" id="dark-btn" aria-label="Toggle dark mode">&#127769;</button>
+<button onclick="S.soundOn=!S.soundOn;saveState();render()" style="background:none;font-size:16px" id="snd-btn" aria-label="Toggle sound">&#128266;</button>
+<div class="stat stat-xp" aria-label="Experience points">&#9889;<span id="hdr-xp">0</span></div>
+<div class="stat stat-str" aria-label="Day streak">&#128293;<span id="hdr-str">0</span></div>
+</div>
+</header>
+<main id="app" style="display:none" role="main"></main>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
