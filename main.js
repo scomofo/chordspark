@@ -34,6 +34,7 @@ function createWindow() {
     minHeight: 700,
     resizable: true,
     title: 'ChordSpark',
+    icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -89,12 +90,13 @@ ipcMain.handle('stems:checkCache', async (event, filePath) => {
 // Run demucs separation
 ipcMain.handle('stems:separate', async (event, filePath) => {
   var resDir = getResourcePath();
-  var demucsBin = path.join(resDir, 'demucs.exe');
+  var demucsBinName = process.platform === 'win32' ? 'demucs.exe' : 'demucs';
+  var demucsBin = path.join(resDir, demucsBinName);
   var modelFile = path.join(resDir, 'ggml-model-htdemucs-6s-f16.bin');
 
   // Check binary exists
   if (!fs.existsSync(demucsBin)) {
-    throw new Error('demucs.exe not found at ' + demucsBin + '. Place the compiled binary in the resources/ folder.');
+    throw new Error(demucsBinName + ' not found at ' + demucsBin + '. Place the compiled binary in the resources/ folder.');
   }
   if (!fs.existsSync(modelFile)) {
     throw new Error('Model file not found at ' + modelFile + '. Download ggml-model-htdemucs-6s-f16.bin from HuggingFace.');

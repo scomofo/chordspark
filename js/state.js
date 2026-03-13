@@ -55,7 +55,11 @@ var S={
   // Stem Separation
   stemFile:null,stemStatus:"idle",stemProgress:0,stemError:null,
   stemPaths:null,stemPlaying:false,stemVolume:0.8,stemCurrentTime:0,stemDuration:0,
-  stemToggles:{vocals:true,drums:true,bass:true,guitar:false,piano:false,other:false}
+  stemToggles:{vocals:true,drums:true,bass:true,guitar:false,piano:false,other:false},
+  // Chord Runner
+  runnerActive:false,runnerScore:0,runnerCombo:0,runnerMaxCombo:0,
+  runnerLives:3,runnerTarget:null,runnerObstacles:[],runnerSpeed:2,
+  runnerLastSpawn:0,runnerStartTime:0,runnerResults:null,runnerHighScore:0,runnerDistance:0
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -69,7 +73,7 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "level","chordProgress","soundOn","darkMode","earnedBadges","selectedLevel","lastSessionDate",
   "history","customSets","earTrainScore","transitionStats",
   "dailyGoalMinutes","todayPracticeSeconds","lastPracticeDate","goalReachedToday","goalStreak",
-  "importedSongs","strumTone","midiEnabled","midiOutputId","lastChordName","focusMode"];
+  "importedSongs","strumTone","midiEnabled","midiOutputId","lastChordName","focusMode","runnerHighScore"];
 
 function saveState(){
   try{
@@ -104,14 +108,14 @@ function loadState(){
 }
 
 function resetProgress(){
-  // Save backup for undo
+  // Save backup for undo — keep old data in localStorage until undo expires
   _undoBackup={};
   for(var i=0;i<PERSIST_FIELDS.length;i++){
     var val=S[PERSIST_FIELDS[i]];
     _undoBackup[PERSIST_FIELDS[i]]=JSON.parse(JSON.stringify(val));
   }
-  // Clear state
-  localStorage.removeItem(SAVE_KEY);
+  try{localStorage.setItem(SAVE_KEY+"_backup",JSON.stringify(_undoBackup));}catch(e){}
+  // Clear state in memory (localStorage cleared only when undo timer expires)
   S.xp=0;S.streak=0;S.sessions=0;S.drillCount=0;S.dailyDone=0;S.quizCorrect=0;S.songsPlayed=0;
   S.level=1;S.chordProgress={};S.earnedBadges=[];S.selectedLevel=1;S.lastSessionDate=null;
   S.history=[];S.customSets=[];S.earTrainScore=0;S.transitionStats={};
@@ -126,6 +130,7 @@ function resetProgress(){
     if(S.undoTimer<=0){
       clearInterval(T.undo);T.undo=null;
       S.showUndoToast=false;_undoBackup=null;
+      try{localStorage.removeItem(SAVE_KEY+"_backup");}catch(e){}
       saveState();
     }
     render();
@@ -140,7 +145,23 @@ function undoReset(){
   }
   _undoBackup=null;
   S.showUndoToast=false;
+  try{localStorage.removeItem(SAVE_KEY+"_backup");}catch(e){}
   saveState();render();
+}
+
+// Recover from crash during reset undo window
+function recoverFromCrash(){
+  try{
+    var backup=localStorage.getItem(SAVE_KEY+"_backup");
+    if(backup){
+      var data=JSON.parse(backup);
+      for(var i=0;i<PERSIST_FIELDS.length;i++){
+        if(data[PERSIST_FIELDS[i]]!==undefined)S[PERSIST_FIELDS[i]]=data[PERSIST_FIELDS[i]];
+      }
+      localStorage.removeItem(SAVE_KEY+"_backup");
+      saveState();
+    }
+  }catch(e){}
 }
 
 function checkStreak(){
@@ -191,6 +212,7 @@ function logHistory(type,detail,xp){
 
 // Load saved progress
 loadState();
+recoverFromCrash();
 checkStreak();
 checkPracticeDate();
 S.sessionStartTime=Date.now();

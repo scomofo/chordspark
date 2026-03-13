@@ -64,7 +64,7 @@ function genQ(){
 var _rhythmAnim=null;
 function rhythmTick(){
   if(!S.rhythmActive)return;
-  var elapsed=Date.now()-S.rhythmStartTime;
+  var elapsed=performance.now()-S.rhythmStartTime;
   var lastBeatTime=S.rhythmBeats[S.rhythmBeats.length-1].time;
   if(elapsed>lastBeatTime+2000){
     finishRhythm();
@@ -93,8 +93,99 @@ function finishRhythm(){
   render();
 }
 
+// ===== CHORD RUNNER =====
+var _runnerAnim=null;
+var _runnerObstId=0;
+
+function spawnRunnerObstacle(){
+  var av=CHORDS[S.level]||CHORDS[1];
+  var isTarget=Math.random()<0.35;
+  var chord;
+  if(isTarget){
+    chord=S.runnerTarget;
+  }else{
+    chord=av[Math.floor(Math.random()*av.length)];
+    var tries=0;
+    while(chord.name===S.runnerTarget.name&&av.length>1&&tries<15){
+      chord=av[Math.floor(Math.random()*av.length)];tries++;
+    }
+  }
+  S.runnerObstacles.push({
+    id:++_runnerObstId,name:chord.name,short:chord.short,
+    x:460,isTarget:chord.name===S.runnerTarget.name,
+    hit:false,result:null
+  });
+}
+
+function changeRunnerTarget(){
+  var av=CHORDS[S.level]||CHORDS[1];
+  var prev=S.runnerTarget;var tries=0;
+  S.runnerTarget=av[Math.floor(Math.random()*av.length)];
+  while(S.runnerTarget.name===prev.name&&av.length>1&&tries<15){
+    S.runnerTarget=av[Math.floor(Math.random()*av.length)];tries++;
+  }
+  // Mark existing unmatched obstacles as non-target (new target now)
+  for(var i=0;i<S.runnerObstacles.length;i++){
+    if(!S.runnerObstacles[i].hit){
+      S.runnerObstacles[i].isTarget=S.runnerObstacles[i].name===S.runnerTarget.name;
+    }
+  }
+}
+
+function finishRunner(){
+  S.runnerActive=false;
+  if(_runnerAnim)cancelAnimationFrame(_runnerAnim);
+  if(S.runnerScore>S.runnerHighScore)S.runnerHighScore=S.runnerScore;
+  S.runnerResults={score:S.runnerScore,maxCombo:S.runnerMaxCombo,distance:Math.floor(S.runnerDistance/100)};
+  var xp=Math.round(S.runnerScore/20);
+  if(xp>0){S.xp+=xp;logHistory("runner","Score: "+S.runnerScore,xp);saveState();}
+  snd("complete");
+  render();
+}
+
+function runnerTick(){
+  if(!S.runnerActive)return;
+  var now=Date.now();
+  var elapsed=(now-S.runnerStartTime)/1000;
+
+  // Speed ramps from 2 to 6 over ~60s
+  S.runnerSpeed=Math.min(6,2+elapsed/15);
+
+  // Move obstacles
+  for(var i=S.runnerObstacles.length-1;i>=0;i--){
+    var o=S.runnerObstacles[i];
+    o.x-=S.runnerSpeed;
+    // Passed the hit zone without being handled
+    if(o.x<20&&!o.hit){
+      o.hit=true;
+      if(o.isTarget){
+        S.runnerLives--;S.runnerCombo=0;o.result="missed";
+        snd("wrong");
+        if(S.runnerLives<=0){finishRunner();return;}
+      }
+    }
+    // Remove off-screen
+    if(o.x<-100)S.runnerObstacles.splice(i,1);
+  }
+
+  // Track distance for ground animation
+  S.runnerDistance+=S.runnerSpeed;
+
+  // Spawn obstacles
+  var spawnInterval=Math.max(900,1800-elapsed*12);
+  if(now-S.runnerLastSpawn>spawnInterval){
+    spawnRunnerObstacle();
+    S.runnerLastSpawn=now;
+  }
+
+  render();
+  _runnerAnim=requestAnimationFrame(runnerTick);
+}
+
 // ===== COMMUNITY API =====
 var COMMUNITY_URL="http://localhost:3456";
+if(!COMMUNITY_URL.startsWith("https")&&COMMUNITY_URL.indexOf("localhost")===-1&&COMMUNITY_URL.indexOf("127.0.0.1")===-1)
+  console.warn("ChordSpark: Community URL should use HTTPS for non-local servers");
 
 function fetchCommunity(){
   S.communityLoading=true;S.communityError=null;render();
@@ -176,17 +267,25 @@ function _loadStemFileUrls(paths){
 // ===== CHORD MORPH TRACKING =====
 var _prevChordKey="";
 
+// ===== CLEANUP =====
+function stopAllTimers(){
+  clearTimeout(T.session);clearTimeout(T.drill);clearTimeout(T.daily);
+  clearInterval(T.strum);clearInterval(T.song);clearInterval(T.metro);clearInterval(T.prog);
+  if(S.metronomeOn){stopMetronome();S.metronomeOn=false;}
+  if(S.chordDetectOn)stopChordDetect();
+  if(S.rhythmActive){S.rhythmActive=false;if(_rhythmAnim)cancelAnimationFrame(_rhythmAnim);}
+  if(S.runnerActive){S.runnerActive=false;if(_runnerAnim)cancelAnimationFrame(_runnerAnim);}
+  if(S.progPlaying){S.progPlaying=false;}
+  cleanupStems();S.stemPlaying=false;
+  S.timerActive=false;S.strumActive=false;S.songPlaying=false;
+}
+
 // ===== ACTION DISPATCHER =====
 window.act=function(a,v){
   if(a==="tab"){
     S.tab=v;S.screen=SCR.HOME;
-    clearTimeout(T.session);clearTimeout(T.drill);clearTimeout(T.daily);clearInterval(T.strum);clearInterval(T.song);
-    if(S.metronomeOn){stopMetronome();S.metronomeOn=false;}if(S.chordDetectOn)stopChordDetect();
-    S.timerActive=false;S.strumActive=false;S.songPlaying=false;
+    stopAllTimers();
     S.earTrainQ=null;S.earTrainAns=null;S.selectedVoicing=0;
-    if(S.rhythmActive){S.rhythmActive=false;if(_rhythmAnim)cancelAnimationFrame(_rhythmAnim);}
-    if(S.progPlaying){S.progPlaying=false;clearInterval(T.prog);}
-    cleanupStems();S.stemPlaying=false;
     if(v===TAB.SONGS&&S.songsSubTab==="community")fetchCommunity();
     render();return;
   }
@@ -319,8 +418,9 @@ window.act=function(a,v){
     snd("click");S.strumActive=!S.strumActive;
     if(S.strumActive){
       var p=S.selectedStrum.pattern,ms=60000/S.selectedStrum.bpm/(p.length>4?2:1);
-      S._strumBeat=0;if(p[0]!=="x")strumChord("E Major");render();
-      T.strum=setInterval(function(){S._strumBeat=(S._strumBeat+1)%p.length;if(p[S._strumBeat]!=="x")strumChord("E Major");render();},ms);
+      var _strumChordName=S.currentChord?S.currentChord.name:"E Major";
+      S._strumBeat=0;if(p[0]!=="x")strumChord(_strumChordName);render();
+      T.strum=setInterval(function(){S._strumBeat=(S._strumBeat+1)%p.length;if(p[S._strumBeat]!=="x")strumChord(_strumChordName);render();},ms);
     }else{clearInterval(T.strum);S._strumBeat=-1;render();}return;
   }
   // === Songs ===
@@ -461,12 +561,12 @@ window.act=function(a,v){
       }
     }
     S.rhythmBeats=beats;S.rhythmScore=0;S.rhythmCombo=0;S.rhythmMaxCombo=0;
-    S.rhythmActive=true;S.rhythmResults=null;S.rhythmStartTime=Date.now();
+    S.rhythmActive=true;S.rhythmResults=null;S.rhythmStartTime=performance.now();
     render();_rhythmAnim=requestAnimationFrame(rhythmTick);
     return;
   }
   if(a==="rhythmTap"&&S.rhythmActive){
-    var now=Date.now()-S.rhythmStartTime;
+    var now=performance.now()-S.rhythmStartTime;
     var closest=null,closestDiff=999999;
     for(var i=0;i<S.rhythmBeats.length;i++){
       var b=S.rhythmBeats[i];
@@ -689,6 +789,48 @@ window.act=function(a,v){
     });
     return;
   }
+  // === Chord Runner ===
+  if(a==="startRunner"){
+    var av=CHORDS[S.level]||CHORDS[1];
+    S.runnerTarget=av[Math.floor(Math.random()*av.length)];
+    S.runnerActive=true;S.runnerScore=0;S.runnerCombo=0;S.runnerMaxCombo=0;
+    S.runnerLives=3;S.runnerObstacles=[];S.runnerSpeed=2;S.runnerDistance=0;
+    S.runnerResults=null;S.runnerStartTime=Date.now();S.runnerLastSpawn=0;
+    _runnerObstId=0;
+    snd("start");render();_runnerAnim=requestAnimationFrame(runnerTick);
+    return;
+  }
+  if(a==="runnerStrum"&&S.runnerActive){
+    var closest=null,closestDist=999;
+    for(var i=0;i<S.runnerObstacles.length;i++){
+      var o=S.runnerObstacles[i];
+      if(o.hit)continue;
+      var dist=Math.abs(o.x-60);
+      if(dist<closestDist&&o.x>0&&o.x<140){
+        closestDist=dist;closest=i;
+      }
+    }
+    if(closest!==null){
+      var o=S.runnerObstacles[closest];
+      o.hit=true;
+      if(o.isTarget){
+        S.runnerCombo++;
+        if(S.runnerCombo>S.runnerMaxCombo)S.runnerMaxCombo=S.runnerCombo;
+        var pts=100*(1+Math.floor(S.runnerCombo/5));
+        S.runnerScore+=pts;o.result="correct";
+        snd("correct");
+        // Change target every 5 correct hits
+        if(S.runnerCombo%5===0&&S.runnerCombo>0)changeRunnerTarget();
+      }else{
+        S.runnerLives--;S.runnerCombo=0;o.result="wrong";
+        snd("wrong");
+        if(S.runnerLives<=0){finishRunner();return;}
+      }
+    }else{
+      S.runnerCombo=0;
+    }
+    render();return;
+  }
   // === Stem Separation ===
   if(a==="stemOpenFile"){
     if(!window.electron)return;
@@ -782,12 +924,8 @@ window.act=function(a,v){
   if(a==="undoReset"){undoReset();return;}
   // === Back ===
   if(a==="back"){
-    clearTimeout(T.session);clearTimeout(T.drill);clearTimeout(T.daily);clearInterval(T.strum);clearInterval(T.song);clearInterval(T.metro);
-    stopMetronome();S.metronomeOn=false;if(S.chordDetectOn)stopChordDetect();
-    if(S.rhythmActive){S.rhythmActive=false;if(_rhythmAnim)cancelAnimationFrame(_rhythmAnim);}
-    if(S.progPlaying){S.progPlaying=false;clearInterval(T.prog);}
-    cleanupStems();S.stemPlaying=false;
-    S.timerActive=false;S.strumActive=false;S.songPlaying=false;S.selectedVoicing=0;S.screen=SCR.HOME;render();
+    stopAllTimers();
+    S.selectedVoicing=0;S.screen=SCR.HOME;render();
   }
 };
 
@@ -799,6 +937,12 @@ function applyTheme(){
 
 var _lastScreen="";
 function render(){
+  try{_renderInner();}catch(e){
+    console.error("Render error:",e);
+    document.getElementById("app").innerHTML='<div class="card" style="margin:20px;text-align:center"><h2>Something went wrong</h2><p style="color:var(--text-muted);margin:8px 0">'+escHTML(String(e.message||e))+'</p><button class="btn" onclick="location.reload()" style="background:#FF6B6B;color:#fff;margin-top:12px">Reload</button></div>';
+  }
+}
+function _renderInner(){
   document.getElementById("hdr-xp").textContent=S.xp;
   document.getElementById("hdr-str").textContent=S.streak;
   document.getElementById("snd-btn").textContent=S.soundOn?"\uD83D\uDD0A":"\uD83D\uDD07";
@@ -877,6 +1021,7 @@ document.addEventListener("keydown",function(e){
     if(S.screen===SCR.STRUM){act("toggleStrum");return;}
     if(S.screen===SCR.SONG){act("toggleSong");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.RHYTHM&&S.rhythmActive){act("rhythmTap");return;}
+    if(S.screen===SCR.HOME&&S.tab===TAB.RUNNER&&S.runnerActive){act("runnerStrum");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.BUILD&&S.progChords.length>=2){act("progPlay");return;}
     return;
   }

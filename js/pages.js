@@ -1,8 +1,48 @@
 // ===== PAGE RENDERING =====
 
+// Build chord check inner HTML (shared by sessionPage and updateChordCheckUI)
+function _buildChordCheckInner(exp){
+  // Note pills row — fixed height so layout doesn't jump
+  var h='<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:10px;min-height:32px">';
+  for(var i=0;i<exp.length;i++){
+    var found=S.detectedNotes.indexOf(exp[i])!==-1;
+    h+='<span class="note-pill" style="background:'+(found?"#4ECDC422":"var(--chip-bg)")+';color:'+(found?"#4ECDC4":"var(--text-muted)")+';border:2px solid '+(found?"#4ECDC4":"var(--border)")+'">'+(found?"&#9989;":"&#9675;")+' '+exp[i]+'</span>';
+  }
+  h+='</div>';
+  // Match ring area — always same height to prevent layout shifts
+  h+='<div style="text-align:center;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center">';
+  if(S.chordMatch>=0){
+    var mc=S.chordMatch>=80?"#4ECDC4":S.chordMatch>=50?"#FFE66D":"#FF6B6B";
+    var ml=S.chordMatch>=80?"Great!":S.chordMatch>=50?"Getting there...":"Keep trying!";
+    h+=ringHTML(S.chordMatch,70,5,mc,'<div style="font-size:16px;font-weight:900;color:'+mc+'">'+S.chordMatch+'%</div>',"Chord match")+'<div style="font-size:12px;font-weight:700;color:'+mc+';margin-top:4px">'+ml+'</div>';
+  }else{h+='<div style="color:var(--text-muted);font-size:13px">Strum the chord...</div>';}
+  h+='</div>';
+  // AI Coach feedback — fixed min height
+  h+='<div style="min-height:20px">';
+  var tips=getCoachFeedback(S.currentChord?S.currentChord.name:"",S.detectedNotes,exp);
+  if(tips.length>0&&S.chordMatch>=0&&S.chordMatch<100){
+    h+='<div style="margin-top:10px;background:var(--input-bg);border-radius:12px;padding:10px">';
+    h+='<div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:6px">&#129302; Coach Tips:</div>';
+    for(var i=0;i<tips.length;i++){
+      h+='<div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">&#8226; '+tips[i]+'</div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+// Update chord check results without full DOM rebuild
+function updateChordCheckUI(){
+  var el=document.getElementById("chord-check-results");
+  if(!el||!S.chordDetectOn)return;
+  var exp=getExpectedNotes(S.currentChord?S.currentChord.name:"");
+  el.innerHTML=_buildChordCheckInner(exp);
+}
+
 function homePage(){
   var h='<div class="tabs" role="tablist">';
-  var allTabs=[[TAB.PRACTICE,"\uD83C\uDFB6"],[TAB.DRILL,"\u26A1"],[TAB.DAILY,"\uD83C\uDFC5"],[TAB.QUIZ,"\uD83E\uDDE0"],[TAB.EAR,"\uD83D\uDC42"],[TAB.STRUM,"\uD83C\uDFBC"],[TAB.SONGS,"\uD83C\uDFB5"],[TAB.RHYTHM,"\uD83E\uDD41"],[TAB.BUILD,"\uD83D\uDD27"],[TAB.TUNER,"\uD83C\uDFA4"],[TAB.STATS,"\uD83D\uDCCA"],[TAB.GUIDE,"\uD83D\uDCD6"]];
+  var allTabs=[[TAB.PRACTICE,"\uD83C\uDFB6"],[TAB.DRILL,"\u26A1"],[TAB.DAILY,"\uD83C\uDFC5"],[TAB.QUIZ,"\uD83E\uDDE0"],[TAB.EAR,"\uD83D\uDC42"],[TAB.STRUM,"\uD83C\uDFBC"],[TAB.SONGS,"\uD83C\uDFB5"],[TAB.RHYTHM,"\uD83E\uDD41"],[TAB.RUNNER,"\uD83C\uDFAE"],[TAB.BUILD,"\uD83D\uDD27"],[TAB.TUNER,"\uD83C\uDFA4"],[TAB.STATS,"\uD83D\uDCCA"],[TAB.GUIDE,"\uD83D\uDCD6"]];
   var focusTabs=[TAB.PRACTICE,TAB.DRILL,TAB.DAILY,TAB.STATS,TAB.GUIDE];
   var tabs=S.focusMode?allTabs.filter(function(t){return focusTabs.indexOf(t[0])!==-1;}):allTabs;
   for(var i=0;i<tabs.length;i++){
@@ -19,6 +59,7 @@ function homePage(){
   else if(S.tab===TAB.STRUM) h+=strumTab();
   else if(S.tab===TAB.SONGS) h+=songsTab();
   else if(S.tab===TAB.RHYTHM) h+=rhythmTab();
+  else if(S.tab===TAB.RUNNER) h+=runnerTab();
   else if(S.tab===TAB.BUILD) h+=buildTab();
   else if(S.tab===TAB.TUNER) h+=tunerTab();
   else if(S.tab===TAB.STATS) h+=statsTab();
@@ -127,7 +168,7 @@ function customSetsSection(){
         h+='</div></div>';
         h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
         for(var j=0;j<cs.chords.length;j++){
-          h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+cs.chords[j]+'</span>';
+          h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+escHTML(cs.chords[j])+'</span>';
         }
         h+='</div></div>';
       }
@@ -273,7 +314,7 @@ function communitySection(){
   if(S.communityLoading){
     h+='<div class="text-center" style="padding:30px;color:var(--text-muted)">Loading...</div>';
   } else if(S.communityError){
-    h+='<div class="card text-center"><p style="color:#FF6B6B;font-size:13px">'+S.communityError+'</p><p style="color:var(--text-muted);font-size:12px;margin-top:8px">Make sure the community server is running:<br><code>cd server && npm start</code></p></div>';
+    h+='<div class="card text-center"><p style="color:#FF6B6B;font-size:13px">'+escHTML(S.communityError)+'</p><p style="color:var(--text-muted);font-size:12px;margin-top:8px">Make sure the community server is running:<br><code>cd server && npm start</code></p></div>';
   } else if(S.communitySongs.length===0){
     h+='<div class="card text-center"><p style="color:var(--text-muted);font-size:13px">No community songs yet. Be the first to submit!</p></div>';
   } else {
@@ -284,7 +325,7 @@ function communitySection(){
       var chords=[];try{chords=JSON.parse(cs.chords);}catch(e){}
       if(chords.length){
         h+='<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">';
-        for(var j=0;j<chords.length;j++)h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+chords[j]+'</span>';
+        for(var j=0;j<chords.length;j++)h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+escHTML(chords[j])+'</span>';
         h+='</div>';
       }
       h+='<div style="margin-top:8px"><button class="btn" onclick="act(\'playCommunity\',\''+cs.id+'\')" style="padding:8px 16px;font-size:13px;background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff">&#9654; Play</button></div>';
@@ -373,6 +414,87 @@ function rhythmResultsPage(){
   h+='</div></div>';
   h+='<div style="display:flex;gap:10px;justify-content:center"><button class="btn" onclick="S.rhythmResults=null;act(\'startRhythm\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff">Play Again</button>';
   h+='<button class="btn" onclick="S.rhythmResults=null;render()" style="background:#4ECDC4;color:#fff">&#127968; Back</button></div>';
+  h+='</div>';
+  return h;
+}
+
+// ===== CHORD RUNNER TAB =====
+function runnerTab(){
+  if(S.runnerResults)return runnerResultsPage();
+  if(S.runnerActive)return runnerGamePage();
+  var h='<div class="text-center"><h2 style="font-size:22px;font-weight:900;color:var(--text-primary)">Chord Runner &#127918;</h2><p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">Strum the right chords as they scroll by!</p>';
+  h+='<div class="card"><div style="font-size:48px;margin-bottom:12px">&#127928;</div>';
+  h+='<div style="margin-bottom:16px;font-size:13px;color:var(--text-secondary);line-height:1.5">Chord names scroll across the screen.<br><strong>Strum</strong> when the <strong>target chord</strong> reaches you.<br>Let wrong chords pass! 3 lives.</div>';
+  if(S.runnerHighScore>0)h+='<div style="margin-bottom:12px;font-size:15px;font-weight:800;color:#FFE66D">&#127942; High Score: '+S.runnerHighScore+'</div>';
+  h+='<button class="btn" onclick="act(\'startRunner\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:18px;padding:16px 40px">&#9654; Start!</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function runnerGamePage(){
+  var h='<div>';
+  // Lives, Score, Combo row
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px">';
+  h+='<div style="font-size:18px;letter-spacing:2px">';
+  for(var i=0;i<3;i++)h+=(i<S.runnerLives?'&#10084;&#65039;':'&#128420;');
+  h+='</div>';
+  h+='<div style="font-size:22px;font-weight:900;color:#FFE66D">'+S.runnerScore+'</div>';
+  h+='<div style="font-size:16px;font-weight:800;color:'+(S.runnerCombo>=3?'#4ECDC4':'var(--text-muted)')+'">'+S.runnerCombo+'x</div>';
+  h+='</div>';
+
+  // Target chord card
+  h+='<div class="card mb12" style="padding:10px 16px;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(78,205,196,.12),rgba(69,183,209,.12));border:2px solid rgba(78,205,196,.3)">';
+  if(S.runnerTarget){
+    h+=chordSVG(S.runnerTarget,55);
+    h+='<div style="flex:1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Target Chord</div>';
+    h+='<div style="font-size:22px;font-weight:900;color:var(--text-primary)">'+escHTML(S.runnerTarget.short)+'</div>';
+    h+='<div style="font-size:11px;color:var(--text-muted)">'+escHTML(S.runnerTarget.name)+'</div></div>';
+  }
+  h+='</div>';
+
+  // Scrolling lane
+  h+='<div class="runner-lane">';
+  h+='<div class="runner-ground"></div>';
+  h+='<div class="runner-hit-zone"></div>';
+  h+='<div class="runner-player" id="runner-player">&#127928;</div>';
+  for(var i=0;i<S.runnerObstacles.length;i++){
+    var o=S.runnerObstacles[i];
+    if(o.x<-80||o.x>500)continue;
+    var cls="runner-obstacle";
+    if(o.result==="correct")cls+=" correct";
+    else if(o.result==="wrong")cls+=" wrong";
+    else if(o.result==="missed")cls+=" missed";
+    else cls+=" normal";
+    h+='<div class="'+cls+'" style="left:'+Math.round(o.x)+'px">'+escHTML(o.short)+'</div>';
+  }
+  // Scrolling ground dashes
+  var offset=Math.round(S.runnerDistance%30);
+  for(var i=-1;i<18;i++){
+    var gx=i*30-offset;
+    h+='<div style="position:absolute;bottom:10px;left:'+gx+'px;width:16px;height:2px;background:var(--text-muted);opacity:0.25;border-radius:1px"></div>';
+  }
+  h+='</div>';
+
+  // Strum button
+  h+='<button class="btn" onclick="act(\'runnerStrum\')" style="width:100%;padding:22px;font-size:20px;font-weight:900;background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;border-radius:16px;margin-top:4px;user-select:none;-webkit-user-select:none">&#127928; STRUM!</button>';
+  h+='<div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text-muted)">Press <strong>Space</strong> or tap to strum</div>';
+  h+='</div>';
+  return h;
+}
+
+function runnerResultsPage(){
+  var r=S.runnerResults;
+  var isHigh=r.score>=S.runnerHighScore&&r.score>0;
+  var h='<div class="text-center" style="padding-top:20px"><div style="font-size:56px;animation:bn .6s ease">&#127918;</div>';
+  h+='<h2 style="font-size:26px;font-weight:900;color:var(--text-primary)">Game Over!</h2>';
+  if(isHigh)h+='<div style="font-size:16px;font-weight:800;color:#FFE66D;margin:8px 0;animation:bn .8s ease">&#127942; New High Score!</div>';
+  h+='<div class="card mb16" style="margin-top:12px"><div style="display:flex;justify-content:space-around;text-align:center">';
+  h+='<div><div style="font-size:32px;font-weight:900;color:#FFE66D">'+r.score+'</div><div style="font-size:11px;color:var(--text-muted)">Score</div></div>';
+  h+='<div><div style="font-size:32px;font-weight:900;color:#4ECDC4">'+r.maxCombo+'x</div><div style="font-size:11px;color:var(--text-muted)">Max Combo</div></div>';
+  h+='<div><div style="font-size:32px;font-weight:900;color:#FF6B6B">'+r.distance+'m</div><div style="font-size:11px;color:var(--text-muted)">Distance</div></div>';
+  h+='</div></div>';
+  h+='<div style="display:flex;gap:10px;justify-content:center"><button class="btn" onclick="S.runnerResults=null;act(\'startRunner\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff">Play Again</button>';
+  h+='<button class="btn" onclick="S.runnerResults=null;render()" style="background:#4ECDC4;color:#fff">&#127968; Back</button></div>';
   h+='</div>';
   return h;
 }
@@ -722,8 +844,12 @@ function sessionPage(){
 
   h+='<div class="flex-center mb12">'+ringHTML((1-S.timer/120)*100,90,7,"#FF6B6B",'<div style="font-size:22px;font-weight:900;color:var(--text-primary)">'+m+':'+(s<10?'0':'')+s+'</div>',"Session timer")+'</div>';
   var chordKey=c.name+"_v"+S.selectedVoicing;
-  var morphClass=(_prevChordKey&&_prevChordKey!==chordKey)?" chord-morph":"";
-  h+='<div class="card'+morphClass+'" style="display:inline-block;margin-bottom:12px">'+chordSVG(displayChord,220,c.name,true)+'</div>';
+  var chordChanged=_prevChordKey!==chordKey;
+  var morphClass=(chordChanged&&_prevChordKey)?" chord-morph":"";
+  // Only animate on first appearance or chord/voicing change, not every timer tick
+  var shouldAnimate=chordChanged;
+  h+='<div class="card'+morphClass+'" style="display:inline-block;margin-bottom:12px">'+chordSVG(displayChord,220,c.name,shouldAnimate)+'</div>';
+  _prevChordKey=chordKey;
   h+='<button onclick="act(\'previewChord\',\''+c.name+'\')" style="background:none;font-size:14px;color:var(--text-muted);margin-bottom:8px" aria-label="Preview chord sound">&#128264; Listen to this chord</button>';
 
   // Metronome card
@@ -737,34 +863,15 @@ function sessionPage(){
     h+='</div>';
   }
   h+='</div>';
-  // Chord detection card
+  // Chord detection card — detection results update via direct DOM (see updateChordCheckUI)
   var exp=getExpectedNotes(c.name);
-  h+='<div class="card mb16"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h4 style="margin:0;font-size:14px;color:var(--text-primary)">&#127908; Chord Check</h4><button class="btn" onclick="act(\'toggleChordDetect\')" style="padding:8px 16px;font-size:13px;background:'+(S.chordDetectOn?"#FFE66D":"linear-gradient(135deg,#FF6B6B,#FF8A5C)")+';color:'+(S.chordDetectOn?"var(--text-primary)":"#fff")+'">'+(S.chordDetectOn?"&#9632; Stop":"&#127908; Listen")+'</button></div>';
+  h+='<div class="card mb16" style="min-height:80px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h4 style="margin:0;font-size:14px;color:var(--text-primary)">&#127908; Chord Check</h4><button class="btn" id="chord-check-btn" onclick="act(\'toggleChordDetect\')" style="padding:8px 16px;font-size:13px;background:'+(S.chordDetectOn?"#FFE66D":"linear-gradient(135deg,#FF6B6B,#FF8A5C)")+';color:'+(S.chordDetectOn?"var(--text-primary)":"#fff")+'">'+(S.chordDetectOn?"&#9632; Stop":"&#127908; Listen")+'</button></div>';
   if(S.chordDetectErr)h+='<p style="color:#FF6B6B;font-size:12px;margin-bottom:8px">'+S.chordDetectErr+'</p>';
+  h+='<div id="chord-check-results">';
   if(S.chordDetectOn){
-    h+='<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:10px">';
-    for(var i=0;i<exp.length;i++){
-      var found=S.detectedNotes.indexOf(exp[i])!==-1;
-      h+='<span class="note-pill" style="background:'+(found?"#4ECDC422":"var(--chip-bg)")+';color:'+(found?"#4ECDC4":"var(--text-muted)")+';border:2px solid '+(found?"#4ECDC4":"var(--border)")+'">'+(found?"&#9989;":"&#9675;")+' '+exp[i]+'</span>';
-    }
-    h+='</div>';
-    if(S.chordMatch>=0){
-      var mc=S.chordMatch>=80?"#4ECDC4":S.chordMatch>=50?"#FFE66D":"#FF6B6B";
-      var ml=S.chordMatch>=80?"Great!":S.chordMatch>=50?"Getting there...":"Keep trying!";
-      h+='<div style="text-align:center">'+ringHTML(S.chordMatch,70,5,mc,'<div style="font-size:16px;font-weight:900;color:'+mc+'">'+S.chordMatch+'%</div>',"Chord match")+'<div style="font-size:12px;font-weight:700;color:'+mc+';margin-top:4px">'+ml+'</div></div>';
-    }else{h+='<div style="text-align:center;color:var(--text-muted);font-size:13px">Strum the chord...</div>';}
-    // AI Coach feedback
-    var tips=getCoachFeedback(c.name,S.detectedNotes,exp);
-    if(tips.length>0&&S.chordMatch>=0&&S.chordMatch<100){
-      h+='<div style="margin-top:10px;background:var(--input-bg);border-radius:12px;padding:10px">';
-      h+='<div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:6px">&#129302; Coach Tips:</div>';
-      for(var i=0;i<tips.length;i++){
-        h+='<div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">&#8226; '+tips[i]+'</div>';
-      }
-      h+='</div>';
-    }
+    h+=_buildChordCheckInner(exp);
   }else{h+='<div style="text-align:center;color:var(--text-muted);font-size:12px">Enable mic to check your chord</div>';}
-  h+='</div>';
+  h+='</div></div>';
   h+='<div class="card mb16" style="text-align:left"><h4 style="margin:0 0 6px;color:var(--text-primary);font-size:14px">&#128161; Tips</h4><p style="margin:0;font-size:13px;color:var(--text-label);line-height:1.5">Press firmly behind the fret. Strum each string to check for buzz. Keep your thumb relaxed!</p></div>';
   h+='<div style="display:flex;gap:10px;justify-content:center"><button class="btn" onclick="act(\'toggleTimer\')" style="background:'+(S.timerActive?"#FFE66D":"#4ECDC4")+';color:'+(S.timerActive?"var(--text-primary)":"#fff")+'">'+(S.timerActive?"&#9208; Pause":"&#9654; Resume")+'</button><button class="btn" onclick="act(\'doneSession\')" style="background:#FF6B6B;color:#fff">&#10003; Done</button></div></div>';
   return h;
@@ -778,13 +885,15 @@ function completePage(){
 function drillPage(){
   if(S.drillChords.length<2)return '';
   var c=S.drillChords[S.drillIdx],nx=S.drillChords[(S.drillIdx+1)%2];
-  var morphClass=(_prevChordKey&&_prevChordKey!==c.name)?" chord-morph":"";
+  var drillChanged=_prevChordKey!==c.name;
+  var morphClass=(drillChanged&&_prevChordKey)?" chord-morph":"";
   var h='<div class="text-center"><button class="back-btn" onclick="act(\'back\')">&#8592; Back</button>';
   h+='<h2 style="font-size:22px;font-weight:900;color:var(--text-primary);margin:8px 0">Switch Drill &#9889;</h2>';
   h+='<div style="display:flex;justify-content:center;gap:20px;align-items:center;margin-bottom:12px">'+ringHTML((1-S.drillTimer/60)*100,70,6,"#FF6B6B",'<div style="font-size:18px;font-weight:900;color:var(--text-primary)">'+S.drillTimer+'s</div>',"Drill timer");
   h+='<div><div style="font-size:32px;font-weight:900;color:#4ECDC4">'+S.drillSwitches+'</div><div style="font-size:11px;color:var(--text-muted)">switches</div></div></div>';
   h+='<div class="card'+morphClass+'" style="display:inline-block;margin-bottom:12px;border:3px solid '+LC[S.level]+'">';
-  h+='<h3 style="margin:0 0 4px;font-size:16px;color:'+LC[S.level]+'">'+c.name+tierBadgeHTML(c.name,14)+'</h3>'+chordSVG(c,180,null,true)+'</div>';
+  h+='<h3 style="margin:0 0 4px;font-size:16px;color:'+LC[S.level]+'">'+c.name+tierBadgeHTML(c.name,14)+'</h3>'+chordSVG(c,180,null,drillChanged)+'</div>';
+  _prevChordKey=c.name;
   // Transition tip
   var tip=getTransitionTip(c.name,nx.name);
   if(tip){
@@ -857,15 +966,15 @@ function songDetailPage(){
   var sg=S.selectedSong;if(!sg)return '';
   var patBeat=S.songPlaying?(S.songBeat%sg.pattern.length):-1;
   var curDir=patBeat>=0?sg.pattern[patBeat]:"x";
-  var h='<div class="text-center"><button class="back-btn" onclick="act(\'back\')">&#8592; Back</button><h2 style="font-size:22px;font-weight:900;color:var(--text-primary);margin:8px 0">'+sg.title+'</h2><p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">'+sg.artist+' &#8226; '+sg.bpm+' BPM</p>';
+  var h='<div class="text-center"><button class="back-btn" onclick="act(\'back\')">&#8592; Back</button><h2 style="font-size:22px;font-weight:900;color:var(--text-primary);margin:8px 0">'+escHTML(sg.title)+'</h2><p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">'+escHTML(sg.artist)+' &#8226; '+sg.bpm+' BPM</p>';
   h+='<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">';
   for(var i=0;i<sg.chords.length;i++)
-    h+='<span style="background:var(--chip-bg);padding:4px 12px;border-radius:10px;font-size:13px;font-weight:700;color:var(--chip-color)">'+sg.chords[i]+'</span>';
+    h+='<span style="background:var(--chip-bg);padding:4px 12px;border-radius:10px;font-size:13px;font-weight:700;color:var(--chip-color)">'+escHTML(sg.chords[i])+'</span>';
   h+='</div>';
   h+='<div class="card mb16"><h4 style="margin:0 0 10px;font-size:14px;color:var(--text-primary)">Chord Progression</h4><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">';
   for(var i=0;i<sg.progression.length;i++){
     var c=sg.progression[i],isA=S.songPlaying&&i===S.songBeat;
-    h+='<div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:'+(isA?"#FF6B6B":"var(--chip-bg)")+';color:'+(isA?"#fff":"var(--chip-color)")+';font-size:16px;font-weight:800;border:2px solid '+(isA?"#FF6B6B":"var(--border)")+';transition:all .15s;transform:'+(isA?"scale(1.15)":"scale(1)")+'">'+c+'</div>';
+    h+='<div style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:'+(isA?"#FF6B6B":"var(--chip-bg)")+';color:'+(isA?"#fff":"var(--chip-color)")+';font-size:16px;font-weight:800;border:2px solid '+(isA?"#FF6B6B":"var(--border)")+';transition:all .15s;transform:'+(isA?"scale(1.15)":"scale(1)")+'">'+escHTML(c)+'</div>';
   }
   h+='</div></div>';
   if(S.songPlaying){
@@ -936,7 +1045,7 @@ function importSection(){
 
   // Parse result
   if(S.importError){
-    h+='<div class="card mb16"><p style="color:#FF6B6B;font-size:13px;margin:0">'+S.importError+'</p></div>';
+    h+='<div class="card mb16"><p style="color:#FF6B6B;font-size:13px;margin:0">'+escHTML(S.importError)+'</p></div>';
   }
   if(S.importedSong){
     h+='<div class="card mb16">';
@@ -950,13 +1059,13 @@ function importSection(){
       var cn=S.importedSong.chords[i];
       var known=false;
       for(var j=0;j<ALL_CHORDS.length;j++)if(ALL_CHORDS[j].name===cn||ALL_CHORDS[j].short===cn){known=true;break;}
-      h+='<span style="padding:4px 10px;border-radius:10px;font-size:12px;font-weight:700;background:'+(known?"#4ECDC422":"#FF6B6B22")+';color:'+(known?"#4ECDC4":"#FF6B6B")+';border:1px solid '+(known?"#4ECDC4":"#FF6B6B")+'">'+cn+'</span>';
+      h+='<span style="padding:4px 10px;border-radius:10px;font-size:12px;font-weight:700;background:'+(known?"#4ECDC422":"#FF6B6B22")+';color:'+(known?"#4ECDC4":"#FF6B6B")+';border:1px solid '+(known?"#4ECDC4":"#FF6B6B")+'">'+escHTML(cn)+'</span>';
     }
     h+='</div>';
     h+='<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:600">Progression ('+S.importedSong.progression.length+' chords):</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;background:var(--input-bg);border-radius:10px;padding:8px">';
     for(var i=0;i<Math.min(S.importedSong.progression.length,32);i++){
-      h+='<span style="background:var(--card-bg);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;color:var(--text-primary)">'+S.importedSong.progression[i]+'</span>';
+      h+='<span style="background:var(--card-bg);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;color:var(--text-primary)">'+escHTML(S.importedSong.progression[i])+'</span>';
     }
     if(S.importedSong.progression.length>32)h+='<span style="font-size:11px;color:var(--text-muted)">...+'+(S.importedSong.progression.length-32)+' more</span>';
     h+='</div>';

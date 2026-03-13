@@ -214,6 +214,20 @@ button:focus-visible{outline:2px solid #4ECDC4;outline-offset:2px}
 /* ===== Stem Separator Spinner ===== */
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
+/* ===== Chord Runner ===== */
+.runner-lane{position:relative;height:130px;background:var(--input-bg);border-radius:16px;overflow:hidden;margin-bottom:8px;border:2px solid var(--border)}
+.runner-ground{position:absolute;bottom:12px;left:0;right:0;height:2px;background:var(--text-muted);opacity:0.4}
+.runner-hit-zone{position:absolute;left:60px;top:0;bottom:0;width:3px;background:#FF6B6B;z-index:2;opacity:0.5}
+.runner-hit-zone::before{content:'';position:absolute;left:-22px;top:50%;transform:translateY(-50%);width:48px;height:70px;border-radius:14px;border:2px dashed rgba(255,107,107,.3);background:rgba(255,107,107,.04)}
+.runner-player{position:absolute;left:34px;top:50%;transform:translateY(-50%);font-size:28px;z-index:3}
+.runner-player.strum{animation:runnerStrum 0.15s ease}
+.runner-obstacle{position:absolute;top:50%;transform:translateY(-50%);height:48px;min-width:52px;padding:0 12px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;z-index:1;white-space:nowrap}
+.runner-obstacle.normal{background:var(--card-bg);border:2px solid var(--border);color:var(--text-primary)}
+.runner-obstacle.correct{background:#4ECDC4;color:#fff;border:2px solid #4ECDC4;transform:translateY(-50%) scale(1.15);opacity:0.7}
+.runner-obstacle.wrong{background:#FF6B6B;color:#fff;border:2px solid #FF6B6B;transform:translateY(-50%) scale(0.9);opacity:0.7}
+.runner-obstacle.missed{background:#FF6B6B44;color:#FF6B6B;border:2px dashed #FF6B6B}
+@keyframes runnerStrum{0%{transform:translateY(-50%) rotate(0)}40%{transform:translateY(-50%) rotate(-15deg) scale(1.2)}100%{transform:translateY(-50%) rotate(0) scale(1)}}
+
 /* ===== Mobile Safe Area (Capacitor) ===== */
 @supports(padding:env(safe-area-inset-top)){
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}

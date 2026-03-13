@@ -37,10 +37,10 @@ function snd(type){
 
 // ===== STRUM TONES =====
 var STRUM_TONES={
-  classic:{type:"triangle",gain:0.08,attack:0.01,decay:2.5,stagger:0.025},
-  nylon:{type:"sine",gain:0.10,attack:0.02,decay:3.0,stagger:0.030},
-  steel:{type:"sawtooth",gain:0.05,attack:0.005,decay:1.8,stagger:0.020},
-  electric:{type:"square",gain:0.04,attack:0.003,decay:2.0,stagger:0.022,distortion:true}
+  classic:{type:"triangle",gain:0.18,attack:0.01,decay:2.5,stagger:0.025},
+  nylon:{type:"sine",gain:0.20,attack:0.02,decay:3.0,stagger:0.030},
+  steel:{type:"sawtooth",gain:0.10,attack:0.005,decay:1.8,stagger:0.020},
+  electric:{type:"square",gain:0.08,attack:0.003,decay:2.0,stagger:0.022,distortion:true}
 };
 
 function makeDistortionCurve(amount){
@@ -124,24 +124,71 @@ function stopMetronome(){
   S.metronomeOn=false;clearInterval(T.metro);T.metro=null;render();
 }
 
-// ===== TUNER =====
+// ===== TUNER (YIN algorithm) =====
+var _tunerPrevDetecting=false;
 function autoCorrelate(buf,sr){
   var sz=buf.length,rms=0;
   for(var i=0;i<sz;i++)rms+=buf[i]*buf[i];
   rms=Math.sqrt(rms/sz);
-  if(rms<0.01)return -1;
-  var r1=0,r2=sz-1;
-  for(var i=0;i<sz/2;i++)if(Math.abs(buf[i])<0.2){r1=i;break;}
-  for(var i=1;i<sz/2;i++)if(Math.abs(buf[sz-i])<0.2){r2=sz-i;break;}
-  buf=buf.slice(r1,r2);sz=buf.length;
-  var c=[];
-  for(var i=0;i<sz;i++){c[i]=0;for(var j=0;j<sz-i;j++)c[i]+=buf[j]*buf[j+i];}
-  var d=0;while(c[d]>c[d+1])d++;
-  var mV=-1,mI=-1;
-  for(var i=d;i<sz;i++)if(c[i]>mV){mV=c[i];mI=i;}
-  var t=mI,x1=c[t-1],x2=c[t],x3=c[t+1],a=(x1+x3-2*x2)/2,b=(x3-x1)/2;
-  if(a)t=t-b/(2*a);
-  return sr/t;
+  // Hysteresis: higher threshold to start, lower to continue
+  var threshold=_tunerPrevDetecting?0.008:0.015;
+  if(rms<threshold){_tunerPrevDetecting=false;return -1;}
+  _tunerPrevDetecting=true;
+
+  // YIN step 1: Difference function
+  var halfSz=Math.floor(sz/2);
+  var d=new Float32Array(halfSz);
+  for(var tau=0;tau<halfSz;tau++){
+    d[tau]=0;
+    for(var j=0;j<halfSz;j++){
+      var delta=buf[j]-buf[j+tau];
+      d[tau]+=delta*delta;
+    }
+  }
+
+  // YIN step 2: Cumulative mean normalized difference
+  var dn=new Float32Array(halfSz);
+  dn[0]=1;
+  var runningSum=0;
+  for(var tau=1;tau<halfSz;tau++){
+    runningSum+=d[tau];
+    dn[tau]=d[tau]*tau/runningSum;
+  }
+
+  // YIN step 3: Absolute threshold (find first tau below threshold)
+  var yinThreshold=0.15;
+  var tauEst=-1;
+  // Min period: ~2000 Hz max; Max period: ~50 Hz min
+  var minTau=Math.floor(sr/2000);
+  var maxTau=Math.min(halfSz-1,Math.floor(sr/50));
+  for(var tau=minTau;tau<maxTau;tau++){
+    if(dn[tau]<yinThreshold){
+      // Find the local minimum after dropping below threshold
+      while(tau+1<maxTau&&dn[tau+1]<dn[tau])tau++;
+      tauEst=tau;
+      break;
+    }
+  }
+  if(tauEst===-1){
+    // Fallback: find global minimum in range
+    var minVal=Infinity;
+    for(var tau=minTau;tau<maxTau;tau++){
+      if(dn[tau]<minVal){minVal=dn[tau];tauEst=tau;}
+    }
+    if(minVal>0.5)return -1; // Not confident enough
+  }
+
+  // YIN step 4: Parabolic interpolation
+  if(tauEst>0&&tauEst<halfSz-1){
+    var x1=dn[tauEst-1],x2=dn[tauEst],x3=dn[tauEst+1];
+    var a=(x1+x3-2*x2)/2,b=(x3-x1)/2;
+    if(a!==0){
+      var shift=-b/(2*a);
+      if(Math.abs(shift)<=1)tauEst+=shift;
+    }
+  }
+
+  return sr/tauEst;
 }
 
 // ===== CHORD DETECTION =====
@@ -152,12 +199,25 @@ function detectFromFFT(analyser,sampleRate){
   var dataArray=new Uint8Array(bufLen);
   analyser.getByteFrequencyData(dataArray);
   var nyquist=sampleRate/2,binSize=nyquist/bufLen;
+  // Compute noise floor (average of all bins) and max
+  var maxVal=0,sum=0;
+  for(var i=0;i<bufLen;i++){if(dataArray[i]>maxVal)maxVal=dataArray[i];sum+=dataArray[i];}
+  var noiseFloor=sum/bufLen;
+  // Need strong signal above noise — reject if max is barely above ambient
+  if(maxVal<100||maxVal-noiseFloor<50)return [];
+  // Threshold: noise floor + fraction of dynamic range above noise
+  var threshold=noiseFloor+(maxVal-noiseFloor)*0.55;
   var peaks=[];
-  for(var i=2;i<bufLen-2;i++){
+  for(var i=4;i<bufLen-4;i++){
     var freq=i*binSize;
-    if(freq<75||freq>1400)continue;
-    if(dataArray[i]>130&&dataArray[i]>=dataArray[i-1]&&dataArray[i]>=dataArray[i+1]&&dataArray[i]>=dataArray[i-2]&&dataArray[i]>=dataArray[i+2])
-      peaks.push({freq:freq,amp:dataArray[i]});
+    if(freq<60||freq>2000)continue;
+    // Wider peak check: local maximum within ±4 bins
+    if(dataArray[i]<threshold)continue;
+    var isPeak=true;
+    for(var j=1;j<=4;j++){
+      if(dataArray[i]<dataArray[i-j]||dataArray[i]<dataArray[i+j]){isPeak=false;break;}
+    }
+    if(isPeak)peaks.push({freq:freq,amp:dataArray[i]});
   }
   var notes={};
   for(var i=0;i<peaks.length;i++){
@@ -173,16 +233,19 @@ function startChordDetect(){
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
     chordR.stream=st;
     var ctx=new AC(),src=ctx.createMediaStreamSource(st),an=ctx.createAnalyser();
-    an.fftSize=8192;an.smoothingTimeConstant=0.8;src.connect(an);
+    an.fftSize=8192;an.smoothingTimeConstant=0.4;src.connect(an);
     chordR.ctx=ctx;chordR.analyser=an;S.chordDetectOn=true;S.chordDetectErr=null;render();
     function det(){
+      if(!S.chordDetectOn)return;
       var found=detectFromFFT(an,ctx.sampleRate);S.detectedNotes=found;
       var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
       if(expected.length>0&&found.length>0){
         var hits=0;for(var i=0;i<expected.length;i++)if(found.indexOf(expected[i])!==-1)hits++;
         S.chordMatch=Math.round((hits/expected.length)*100);
       }else{S.chordMatch=-1;}
-      render();chordR.anim=requestAnimationFrame(det);
+      // Update only the chord check section, not full DOM rebuild
+      updateChordCheckUI();
+      chordR.anim=requestAnimationFrame(det);
     }det();
   }).catch(function(){S.chordDetectErr="Microphone access denied";render();});
 }

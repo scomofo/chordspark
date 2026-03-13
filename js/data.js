@@ -7,7 +7,7 @@ var SCR={
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",
-  EAR:"ear",STRUM:"strum",SONGS:"songs",RHYTHM:"rhythm",
+  EAR:"ear",STRUM:"strum",SONGS:"songs",RHYTHM:"rhythm",RUNNER:"runner",
   BUILD:"build",TUNER:"tuner",STATS:"stats",GUIDE:"guide"
 };
 
@@ -44,7 +44,8 @@ var CHORDS={
   {name:"Cadd9",short:"Cadd9",fingers:[[1,3,3,"#FF6B6B"],[2,2,2,"#4ECDC4"],[5,3,4,"#45B7D1"]],frets:[-1,3,2,0,3,0],open:[false,false,false,true,false,true],muted:[0]},
   {name:"Dsus2",short:"Dsus2",fingers:[[4,3,3,"#FF6B6B"],[5,2,2,"#4ECDC4"]],frets:[-1,-1,0,2,3,0],open:[false,false,true,false,false,true],muted:[0,1]},
   {name:"Dsus4",short:"Dsus4",fingers:[[3,2,1,"#FF6B6B"],[4,3,3,"#4ECDC4"],[5,3,4,"#45B7D1"]],frets:[-1,-1,0,2,3,3],open:[false,false,true,false,false,false],muted:[0,1]},
-  {name:"Asus2",short:"Asus2",fingers:[[1,2,1,"#FF6B6B"],[2,2,2,"#4ECDC4"]],frets:[-1,0,2,2,0,0],open:[false,true,false,false,true,true],muted:[0]}
+  {name:"Asus2",short:"Asus2",fingers:[[1,2,1,"#FF6B6B"],[2,2,2,"#4ECDC4"]],frets:[-1,0,2,2,0,0],open:[false,true,false,false,true,true],muted:[0]},
+  {name:"F Major 7",short:"Fmaj7",fingers:[[2,3,3,"#FF6B6B"],[3,2,2,"#4ECDC4"],[4,1,1,"#45B7D1"]],frets:[-1,-1,3,2,1,0],open:[false,false,false,false,false,true],muted:[0,1]}
 ],
 3:[
   // --- Original Level 3 ---
@@ -56,7 +57,9 @@ var CHORDS={
   {name:"B Minor",short:"Bm",fingers:[[0,2,1,"#FF6B6B"],[1,2,1,"#FF6B6B"],[2,4,3,"#4ECDC4"],[3,4,4,"#45B7D1"],[4,3,2,"#FFE66D"]],frets:[-1,2,4,4,3,2],open:[],muted:[0],barFret:2,barStrings:[1,5]},
   {name:"F# Minor",short:"F#m",fingers:[[0,2,1,"#FF6B6B"],[1,2,1,"#FF6B6B"],[2,4,3,"#4ECDC4"],[3,4,4,"#45B7D1"],[4,2,1,"#FF6B6B"]],frets:[-1,-1,4,4,2,2],open:[],muted:[0,1],barFret:2,barStrings:[4,5]},
   {name:"A/C#",short:"A/C#",fingers:[[1,4,4,"#FF6B6B"],[2,2,1,"#4ECDC4"],[3,2,2,"#45B7D1"],[4,2,3,"#FFE66D"]],frets:[-1,4,2,2,2,0],open:[false,false,false,false,false,true],muted:[0]},
-  {name:"D/F#",short:"D/F#",fingers:[[0,2,1,"#FF6B6B"],[3,2,2,"#4ECDC4"],[4,3,3,"#45B7D1"],[5,2,4,"#FFE66D"]],frets:[2,0,0,2,3,2],open:[false,true,true,false,false,false],muted:[]}
+  {name:"D/F#",short:"D/F#",fingers:[[0,2,1,"#FF6B6B"],[3,2,2,"#4ECDC4"],[4,3,3,"#45B7D1"],[5,2,4,"#FFE66D"]],frets:[2,0,0,2,3,2],open:[false,true,true,false,false,false],muted:[]},
+  {name:"G Minor",short:"Gm",fingers:[[0,3,1,"#FF6B6B"],[1,3,1,"#FF6B6B"],[2,5,3,"#4ECDC4"],[3,5,4,"#45B7D1"],[4,3,1,"#FF6B6B"],[5,3,1,"#FF6B6B"]],frets:[3,5,5,3,3,3],open:[],muted:[],barFret:3,barStrings:[0,5]},
+  {name:"C Minor",short:"Cm",fingers:[[0,3,1,"#FF6B6B"],[1,3,1,"#FF6B6B"],[2,5,3,"#4ECDC4"],[3,5,4,"#45B7D1"],[4,4,2,"#FFE66D"],[5,3,1,"#FF6B6B"]],frets:[-1,3,5,5,4,3],open:[],muted:[0],barFret:3,barStrings:[1,5]}
 ]};
 
 var ALL_CHORDS=[].concat(CHORDS[1],CHORDS[2],CHORDS[3]);
@@ -75,7 +78,9 @@ var CHORD_NOTES={
   "Cadd9":["C","E","G","D"],"Dsus2":["D","E","A"],"Dsus4":["D","G","A"],"Asus2":["A","B","E"],
   // New Level 3
   "B7":["B","D#","F#","A"],"B Minor":["B","D","F#"],"F# Minor":["F#","A","C#"],
-  "A/C#":["C#","A","E"],"D/F#":["F#","D","A"]
+  "A/C#":["C#","A","E"],"D/F#":["F#","D","A"],
+  // New chords
+  "F Major 7":["F","A","C","E"],"G Minor":["G","A#","D"],"C Minor":["C","D#","G"]
 };
 
 // ===== BADGES =====
@@ -124,7 +129,36 @@ var SONGS=[
   {title:"Hotel California",artist:"Eagles",chords:["Am","E","G","D","F","C","Dm"],level:3,pattern:["D","x","U","x","U","D","x","U"],bpm:74,progression:["Am","Am","E","E","G","G","D","D","F","F","C","C","Dm","Dm","E","E"]},
   {title:"Creep",artist:"Radiohead",chords:["G","B7","C","Cm"],level:3,pattern:["D","D","U","U","D","U"],bpm:92,progression:["G","G","B7","B7","C","C","Cm","Cm"]},
   {title:"Hallelujah",artist:"Leonard Cohen",chords:["C","Am","F","G","E7"],level:3,pattern:["D","x","U","x","U","D","x","U"],bpm:56,progression:["C","Am","C","Am","F","G","C","G"]},
-  {title:"Tears in Heaven",artist:"Eric Clapton",chords:["A","E","F#m","D","E7","A/C#"],level:3,pattern:["D","x","D","U","x","U","D","U"],bpm:80,progression:["A","E","F#m","A/C#","D","E7","A","A"]}
+  {title:"Tears in Heaven",artist:"Eric Clapton",chords:["A","E","F#m","D","E7","A/C#"],level:3,pattern:["D","x","D","U","x","U","D","U"],bpm:80,progression:["A","E","F#m","A/C#","D","E7","A","A"]},
+  // --- One-Chord Songs ---
+  {title:"Tomorrow Never Knows",artist:"The Beatles",chords:["C"],level:1,pattern:["D","D","U","U","D","U"],bpm:125,progression:["C","C","C","C","C","C","C","C"]},
+  {title:"Smokestack Lightning",artist:"Howlin' Wolf",chords:["E"],level:1,pattern:["D","U","D","U","D","U","D","U"],bpm:130,progression:["E","E","E","E","E","E","E","E"]},
+  {title:"Coconut",artist:"Harry Nilsson",chords:["C7"],level:1,pattern:["D","D","U","U","D","U"],bpm:118,progression:["C7","C7","C7","C7","C7","C7","C7","C7"]},
+  {title:"Run Through the Jungle",artist:"CCR",chords:["Dm"],level:2,pattern:["D","D","U","U","D","U"],bpm:130,progression:["Dm","Dm","Dm","Dm","Dm","Dm","Dm","Dm"]},
+  {title:"Get the Party Started",artist:"P!nk",chords:["Bm"],level:2,pattern:["D","x","D","U","x","U","D","U"],bpm:130,progression:["Bm","Bm","Bm","Bm","Bm","Bm","Bm","Bm"]},
+  {title:"The Beat Goes On",artist:"Sonny & Cher",chords:["Em"],level:1,pattern:["D","D","U","U","D","U"],bpm:130,progression:["Em","Em","Em","Em","Em","Em","Em","Em"]},
+  {title:"Peter Gunn",artist:"Duane Eddy",chords:["E"],level:1,pattern:["D","U","D","U","D","U","D","U"],bpm:130,progression:["E","E","E","E","E","E","E","E"]},
+  {title:"Mannish Boy",artist:"Muddy Waters",chords:["E"],level:1,pattern:["D","D","U","U","D","U"],bpm:80,progression:["E","E","E","E","E","E","E","E"]},
+  {title:"Boom Boom",artist:"John Lee Hooker",chords:["E"],level:1,pattern:["D","U","D","U","D","U","D","U"],bpm:135,progression:["E","E","E","E","E","E","E","E"]},
+  {title:"Within You Without You",artist:"The Beatles",chords:["C"],level:1,pattern:["D","D","U","U","D","U"],bpm:110,progression:["C","C","C","C","C","C","C","C"]},
+  {title:"Who is He",artist:"Bill Withers",chords:["Em"],level:1,pattern:["D","x","D","U","x","U","D","U"],bpm:105,progression:["Em","Em","Em","Em","Em","Em","Em","Em"]},
+  {title:"Jump into the Fire",artist:"Harry Nilsson",chords:["E"],level:1,pattern:["D","U","D","U","D","U","D","U"],bpm:135,progression:["E","E","E","E","E","E","E","E"]},
+  {title:"Fever",artist:"Peggy Lee",chords:["Am"],level:2,pattern:["D","x","D","U","x","U","D","U"],bpm:115,progression:["Am","Am","Am","Am","Am","Am","Am","Am"]},
+  {title:"Its All Good",artist:"Bob Dylan",chords:["Gm"],level:2,pattern:["D","D","U","U","D","U"],bpm:100,progression:["Gm","Gm","Gm","Gm","Gm","Gm","Gm","Gm"]},
+  {title:"Shakedown Street",artist:"Grateful Dead",chords:["A"],level:1,pattern:["D","x","U","x","U","D","x","U"],bpm:110,progression:["A","A","A","A","A","A","A","A"]},
+  // --- Two-Chord Songs ---
+  {title:"Eleanor Rigby",artist:"The Beatles",chords:["Em","C"],level:1,pattern:["D","D","U","U","D","U"],bpm:138,progression:["Em","Em","C","C","Em","Em","C","Em"]},
+  {title:"Royals",artist:"Lorde",chords:["C","D"],level:1,pattern:["D","D","U","U","D","U"],bpm:85,progression:["C","C","D","D","C","C","D","D"]},
+  {title:"What I Got",artist:"Sublime",chords:["D","G"],level:1,pattern:["D","U","D","U","D","U","D","U"],bpm:94,progression:["D","D","G","G","D","D","G","G"]},
+  {title:"Whole Lotta Love",artist:"Led Zeppelin",chords:["E","A"],level:1,pattern:["D","D","U","U","D","U"],bpm:92,progression:["E","E","A","A","E","E","A","E"]},
+  {title:"Ill Take You There",artist:"The Staple Singers",chords:["C","F"],level:2,pattern:["D","x","U","x","U","D","x","U"],bpm:108,progression:["C","C","F","F","C","C","F","C"]},
+  {title:"Moves Like Jagger",artist:"Maroon 5",chords:["Em","Bm"],level:2,pattern:["D","x","D","U","x","U","D","U"],bpm:128,progression:["Em","Em","Bm","Bm","Em","Em","Bm","Bm"]},
+  // --- Previously skipped (new chord defs added) ---
+  {title:"Dreams",artist:"Fleetwood Mac",chords:["Fmaj7","G"],level:2,pattern:["D","D","U","U","D","U"],bpm:120,progression:["Fmaj7","Fmaj7","G","G","Fmaj7","Fmaj7","G","G"]},
+  {title:"Do I Wanna Know",artist:"Arctic Monkeys",chords:["Gm","Cm"],level:3,pattern:["D","x","D","U","x","U","D","U"],bpm:85,progression:["Gm","Gm","Cm","Cm","Gm","Gm","Cm","Cm"]},
+  {title:"Chain of Fools",artist:"Aretha Franklin",chords:["Cm"],level:2,pattern:["D","U","D","U","D","U","D","U"],bpm:112,progression:["Cm","Cm","Cm","Cm","Cm","Cm","Cm","Cm"]},
+  {title:"Get Up Stand Up",artist:"Bob Marley",chords:["Cm"],level:2,pattern:["D","x","U","x","U","D","x","U"],bpm:100,progression:["Cm","Cm","Cm","Cm","Cm","Cm","Cm","Cm"]},
+  {title:"Music",artist:"Madonna",chords:["Gm"],level:2,pattern:["D","x","D","U","x","U","D","U"],bpm:120,progression:["Gm","Gm","Gm","Gm","Gm","Gm","Gm","Gm"]}
 ];
 
 // ===== DAILY CHALLENGES =====

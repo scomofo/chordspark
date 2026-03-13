@@ -20,14 +20,20 @@ function chordSVG(ch,sz,label,animate){
   var op=ch.open||[];
   for(var i=0;i<op.length;i++)
     if(op[i])s+='<circle cx="'+(pL+i*sW)+'" cy="'+(pT-12)+'" r="6" fill="none" stroke="#4ECDC4" stroke-width="2"/>';
+  // Barre chords: bar appears first (1.5s), then fingers stagger after
+  // Standard chords: fingers appear with 0.3s stagger, 0.5s duration
+  var isBarre=!!ch.barFret;
+  var fDur=isBarre?0.8:0.5;
+  var fStagger=isBarre?0.3:0.3;
+  var fDelay=isBarre?1.2:0;
   if(ch.barFret){
     var bs=ch.barStrings,mn=Math.min.apply(null,bs),mx=Math.max.apply(null,bs);
-    var barAnim=animate?'style="opacity:0;animation:fingerIn 0.3s ease 0s forwards"':'';
+    var barAnim=animate?'style="opacity:0;animation:fingerIn 1.5s ease-out 0s forwards"':'';
     s+='<rect x="'+(pL+mn*sW-10)+'" y="'+(pT+(ch.barFret-0.5)*fH-8)+'" width="'+((mx-mn)*sW+20)+'" height="16" rx="8" fill="#FF6B6B" opacity="0.85" '+barAnim+'/>';
   }
   for(var i=0;i<ch.fingers.length;i++){
     var f=ch.fingers[i],cx=pL+f[0]*sW,cy=pT+(f[1]-0.5)*fH,r=Math.min(12,sz/16);
-    var animStyle=animate?'style="opacity:0;animation:fingerIn 0.3s ease '+(i*0.15)+'s forwards"':'';
+    var animStyle=animate?'style="opacity:0;animation:fingerIn '+fDur+'s ease-out '+(fDelay+i*fStagger)+'s forwards"':'';
     s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+f[3]+'" stroke="#fff" stroke-width="2" '+animStyle+'/>';
     s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="'+Math.min(11,sz/18)+'" fill="#fff" font-weight="bold" '+animStyle+'>'+f[2]+'</text>';
   }
