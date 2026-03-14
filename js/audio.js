@@ -126,12 +126,20 @@ function stopMetronome(){
 
 // ===== TUNER (YIN algorithm) =====
 var _tunerPrevDetecting=false;
+// Smoothing: require stable note for several consecutive frames before displaying
+var _tunerHistory=[];
+var _tunerHistorySize=5; // frames to average
+var _tunerLastStableNote="";
+var _tunerLastStableCents=0;
+var _tunerStableCount=0;
+var _tunerStableThreshold=3; // consecutive same-note frames to accept
+
 function autoCorrelate(buf,sr){
   var sz=buf.length,rms=0;
   for(var i=0;i<sz;i++)rms+=buf[i]*buf[i];
   rms=Math.sqrt(rms/sz);
   // Hysteresis: higher threshold to start, lower to continue
-  var threshold=_tunerPrevDetecting?0.008:0.015;
+  var threshold=_tunerPrevDetecting?0.01:0.02;
   if(rms<threshold){_tunerPrevDetecting=false;return -1;}
   _tunerPrevDetecting=true;
 
@@ -156,9 +164,9 @@ function autoCorrelate(buf,sr){
   }
 
   // YIN step 3: Absolute threshold (find first tau below threshold)
-  var yinThreshold=0.15;
+  var yinThreshold=0.12;
   var tauEst=-1;
-  // Min period: ~2000 Hz max; Max period: ~50 Hz min
+  // Min period: ~2000 Hz max; Max period: ~50 Hz min (covers low E ~82Hz)
   var minTau=Math.floor(sr/2000);
   var maxTau=Math.min(halfSz-1,Math.floor(sr/50));
   for(var tau=minTau;tau<maxTau;tau++){
@@ -175,7 +183,7 @@ function autoCorrelate(buf,sr){
     for(var tau=minTau;tau<maxTau;tau++){
       if(dn[tau]<minVal){minVal=dn[tau];tauEst=tau;}
     }
-    if(minVal>0.5)return -1; // Not confident enough
+    if(minVal>0.4)return -1; // Not confident enough
   }
 
   // YIN step 4: Parabolic interpolation
@@ -191,60 +199,180 @@ function autoCorrelate(buf,sr){
   return sr/tauEst;
 }
 
+// Smooth tuner output: median filter on frequency, stable note detection
+function smoothTunerResult(freq){
+  if(freq<0){
+    _tunerHistory=[];
+    _tunerStableCount=0;
+    return {note:null,freq:0,cents:0};
+  }
+  // Add to history and keep last N
+  _tunerHistory.push(freq);
+  if(_tunerHistory.length>_tunerHistorySize)_tunerHistory.shift();
+
+  // Median filter to reject outliers
+  var sorted=_tunerHistory.slice().sort(function(a,b){return a-b;});
+  var medianFreq=sorted[Math.floor(sorted.length/2)];
+
+  // Compute note from median frequency
+  var nn=12*Math.log2(medianFreq/440);
+  var nr=Math.round(nn);
+  var ct=Math.round((nn-nr)*100);
+  var idx=((nr%12)+12)%12;
+  var noteName=NOTE_NAMES[(idx+9)%12];
+
+  // Stability check: only change displayed note if new note is consistent
+  if(noteName===_tunerLastStableNote){
+    _tunerStableCount=Math.min(_tunerStableCount+1,_tunerStableThreshold+1);
+    // Smooth cents with exponential moving average
+    _tunerLastStableCents=Math.round(_tunerLastStableCents*0.6+ct*0.4);
+  }else{
+    _tunerStableCount++;
+    if(_tunerStableCount>=_tunerStableThreshold){
+      _tunerLastStableNote=noteName;
+      _tunerLastStableCents=ct;
+      _tunerStableCount=0;
+    }
+  }
+
+  return {
+    note:_tunerLastStableNote||noteName,
+    freq:Math.round(medianFreq*10)/10,
+    cents:_tunerLastStableNote?_tunerLastStableCents:ct
+  };
+}
+
 // ===== CHORD DETECTION =====
 function getExpectedNotes(chordName){return CHORD_NOTES[chordName]||[];}
 
+// Stable chord detection state
+var _chordNoteHistory=[];
+var _chordHistorySize=8; // frames to accumulate
+var _chordFrameCount=0;
+var _chordUpdateInterval=3; // only process every Nth frame (reduce CPU)
+
 function detectFromFFT(analyser,sampleRate){
   var bufLen=analyser.frequencyBinCount;
-  var dataArray=new Uint8Array(bufLen);
-  analyser.getByteFrequencyData(dataArray);
+  var dataArray=new Float32Array(bufLen);
+  analyser.getFloatFrequencyData(dataArray); // dB scale, more precise than byte
   var nyquist=sampleRate/2,binSize=nyquist/bufLen;
-  // Compute noise floor (average of all bins) and max
-  var maxVal=0,sum=0;
-  for(var i=0;i<bufLen;i++){if(dataArray[i]>maxVal)maxVal=dataArray[i];sum+=dataArray[i];}
-  var noiseFloor=sum/bufLen;
-  // Need strong signal above noise — reject if max is barely above ambient
-  if(maxVal<100||maxVal-noiseFloor<50)return [];
-  // Threshold: noise floor + fraction of dynamic range above noise
-  var threshold=noiseFloor+(maxVal-noiseFloor)*0.55;
-  var peaks=[];
-  for(var i=4;i<bufLen-4;i++){
-    var freq=i*binSize;
-    if(freq<60||freq>2000)continue;
-    // Wider peak check: local maximum within ±4 bins
-    if(dataArray[i]<threshold)continue;
-    var isPeak=true;
-    for(var j=1;j<=4;j++){
-      if(dataArray[i]<dataArray[i-j]||dataArray[i]<dataArray[i+j]){isPeak=false;break;}
-    }
-    if(isPeak)peaks.push({freq:freq,amp:dataArray[i]});
+
+  // Find max amplitude and noise floor (median of all bins)
+  var allVals=[];
+  var maxVal=-Infinity;
+  for(var i=0;i<bufLen;i++){
+    if(dataArray[i]>maxVal)maxVal=dataArray[i];
+    allVals.push(dataArray[i]);
   }
+  allVals.sort(function(a,b){return a-b;});
+  var noiseFloor=allVals[Math.floor(allVals.length*0.5)]; // median as noise floor
+
+  // Reject if signal too weak (less than 30dB above noise)
+  if(maxVal<-60||maxVal-noiseFloor<25)return [];
+
+  // Threshold: 40% of dynamic range above noise (more permissive to catch quieter strings)
+  var threshold=noiseFloor+(maxVal-noiseFloor)*0.35;
+
+  // Harmonic Product Spectrum (HPS) to find fundamental frequencies
+  // Downsample the spectrum and multiply — fundamentals align, harmonics don't
+  var hpsOrder=3; // multiply original with 2x and 3x downsampled
+  var hpsLen=Math.floor(bufLen/hpsOrder);
+  var hps=new Float32Array(hpsLen);
+  for(var i=0;i<hpsLen;i++){
+    // Convert from dB to linear for multiplication, then back
+    hps[i]=dataArray[i];
+    for(var h=2;h<=hpsOrder;h++){
+      hps[i]+=dataArray[i*h]; // addition in dB = multiplication in linear
+    }
+  }
+
+  // Find peaks in HPS spectrum (these are likely fundamentals, not harmonics)
+  var peaks=[];
+  for(var i=6;i<hpsLen-6;i++){
+    var freq=i*binSize;
+    if(freq<70||freq>1200)continue; // guitar fundamental range
+    if(hps[i]<threshold*hpsOrder)continue; // scaled threshold for HPS
+    // Local maximum within ±6 bins
+    var isPeak=true;
+    for(var j=1;j<=6;j++){
+      if(hps[i]<hps[i-j]||hps[i]<hps[i+j]){isPeak=false;break;}
+    }
+    if(isPeak){
+      // Parabolic interpolation for sub-bin frequency accuracy
+      var alpha=hps[i-1],beta=hps[i],gamma=hps[i+1];
+      var p=0.5*(alpha-gamma)/(alpha-2*beta+gamma);
+      if(isNaN(p)||Math.abs(p)>1)p=0;
+      var exactFreq=(i+p)*binSize;
+      peaks.push({freq:exactFreq,amp:hps[i]});
+    }
+  }
+
+  // Sort peaks by amplitude (strongest first) and take top 8
+  peaks.sort(function(a,b){return b.amp-a.amp;});
+  peaks=peaks.slice(0,8);
+
+  // Map peaks to note names, keeping only the strongest per note class
   var notes={};
   for(var i=0;i<peaks.length;i++){
     var nn=12*Math.log2(peaks[i].freq/440),nr=Math.round(nn),idx=((nr%12)+12)%12;
     var name=NOTE_NAMES[(idx+9)%12];
+    // Only accept if the peak is close enough to a real note (within 40 cents)
+    var cents=Math.abs((nn-nr)*100);
+    if(cents>40)continue;
     if(!notes[name]||peaks[i].amp>notes[name])notes[name]=peaks[i].amp;
   }
   return Object.keys(notes);
 }
 
+// Accumulate detected notes over several frames for stability
+function getStableChordNotes(rawNotes){
+  _chordNoteHistory.push(rawNotes);
+  if(_chordNoteHistory.length>_chordHistorySize)_chordNoteHistory.shift();
+
+  // Count how often each note appears across recent frames
+  var counts={};
+  for(var i=0;i<_chordNoteHistory.length;i++){
+    var frame=_chordNoteHistory[i];
+    for(var j=0;j<frame.length;j++){
+      counts[frame[j]]=(counts[frame[j]]||0)+1;
+    }
+  }
+
+  // Only include notes detected in at least 40% of recent frames
+  var minCount=Math.max(2,Math.floor(_chordNoteHistory.length*0.4));
+  var stable=[];
+  for(var note in counts){
+    if(counts[note]>=minCount)stable.push(note);
+  }
+  return stable;
+}
+
 function startChordDetect(){
   if(!AC){S.chordDetectErr="Audio not supported";render();return;}
+  _chordNoteHistory=[];_chordFrameCount=0;
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
     chordR.stream=st;
     var ctx=new AC(),src=ctx.createMediaStreamSource(st),an=ctx.createAnalyser();
-    an.fftSize=8192;an.smoothingTimeConstant=0.4;src.connect(an);
+    an.fftSize=16384; // Higher resolution: ~2.7 Hz/bin at 44.1kHz
+    an.smoothingTimeConstant=0.7; // More temporal smoothing
+    src.connect(an);
     chordR.ctx=ctx;chordR.analyser=an;S.chordDetectOn=true;S.chordDetectErr=null;render();
     function det(){
       if(!S.chordDetectOn)return;
-      var found=detectFromFFT(an,ctx.sampleRate);S.detectedNotes=found;
-      var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
-      if(expected.length>0&&found.length>0){
-        var hits=0;for(var i=0;i<expected.length;i++)if(found.indexOf(expected[i])!==-1)hits++;
-        S.chordMatch=Math.round((hits/expected.length)*100);
-      }else{S.chordMatch=-1;}
-      // Update only the chord check section, not full DOM rebuild
-      updateChordCheckUI();
+      _chordFrameCount++;
+      // Only process every Nth frame to reduce CPU and improve stability
+      if(_chordFrameCount%_chordUpdateInterval===0){
+        var rawNotes=detectFromFFT(an,ctx.sampleRate);
+        var found=getStableChordNotes(rawNotes);
+        S.detectedNotes=found;
+        var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
+        if(expected.length>0&&found.length>0){
+          var hits=0;for(var i=0;i<expected.length;i++)if(found.indexOf(expected[i])!==-1)hits++;
+          S.chordMatch=Math.round((hits/expected.length)*100);
+        }else{S.chordMatch=-1;}
+        // Update only the chord check section, not full DOM rebuild
+        updateChordCheckUI();
+      }
       chordR.anim=requestAnimationFrame(det);
     }det();
   }).catch(function(){S.chordDetectErr="Microphone access denied";render();});

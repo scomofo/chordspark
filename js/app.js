@@ -453,17 +453,29 @@ window.act=function(a,v){
     if(!AC){S.tunerErr="Audio not supported";render();return;}
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
       tunerR.stream=st;var ctx=new AC(),src=ctx.createMediaStreamSource(st),an=ctx.createAnalyser();
-      an.fftSize=4096;src.connect(an);
-      tunerR.ctx=ctx;tunerR.analyser=an;S.tunerActive=true;S.tunerErr=null;render();
+      an.fftSize=8192;src.connect(an); // Larger buffer for better low-freq accuracy
+      tunerR.ctx=ctx;tunerR.analyser=an;S.tunerActive=true;S.tunerErr=null;
+      _tunerHistory=[];_tunerStableCount=0;_tunerLastStableNote="";
+      render();
       var buf=new Float32Array(an.fftSize);
+      var _tunerFrameCount=0;
       function det(){
-        an.getFloatTimeDomainData(buf);var f=autoCorrelate(buf,ctx.sampleRate);
-        if(f>50&&f<1500){
-          S.tunerFreq=Math.round(f*10)/10;
-          var nn=12*Math.log2(f/440),nr=Math.round(nn),ct=Math.round((nn-nr)*100),idx=((nr%12)+12)%12;
-          S.tunerNote=NOTE_NAMES[(idx+9)%12];S.tunerCents=ct;
+        _tunerFrameCount++;
+        // Only process every 2nd frame (~30fps) to save CPU
+        if(_tunerFrameCount%2===0){
+          an.getFloatTimeDomainData(buf);var f=autoCorrelate(buf,ctx.sampleRate);
+          var result=smoothTunerResult(f);
+          if(result.note){
+            S.tunerNote=result.note;
+            S.tunerFreq=result.freq;
+            S.tunerCents=result.cents;
+          }else if(f<0){
+            S.tunerNote=null;S.tunerFreq=0;S.tunerCents=0;
+          }
+          // Targeted UI update instead of full render
+          updateTunerUI();
         }
-        render();tunerR.anim=requestAnimationFrame(det);
+        tunerR.anim=requestAnimationFrame(det);
       }det();
     }).catch(function(){S.tunerErr="Microphone access denied";render();});return;
   }

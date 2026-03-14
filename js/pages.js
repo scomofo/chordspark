@@ -40,6 +40,50 @@ function updateChordCheckUI(){
   el.innerHTML=_buildChordCheckInner(exp);
 }
 
+// Targeted tuner UI update (avoids full DOM rebuild at ~30fps)
+function updateTunerUI(){
+  var noteEl=document.getElementById("tuner-note-display");
+  var freqEl=document.getElementById("tuner-freq-display");
+  var needleEl=document.getElementById("tuner-needle");
+  var statusEl=document.getElementById("tuner-status");
+  var stringsEl=document.getElementById("tuner-strings");
+  if(!noteEl)return; // not on tuner tab
+
+  var inT=Math.abs(S.tunerCents)<5;
+  var tC=inT?"#4ECDC4":Math.abs(S.tunerCents)<15?"#FFE66D":"#FF6B6B";
+
+  noteEl.textContent=S.tunerNote||"\u2014";
+  noteEl.style.color=tC;
+  freqEl.textContent=S.tunerFreq>0?S.tunerFreq+" Hz":"Play a note...";
+
+  if(needleEl){
+    needleEl.style.left=(50+S.tunerCents/2)+"%";
+    needleEl.style.background=tC;
+  }
+
+  if(statusEl){
+    if(!S.tunerFreq)statusEl.innerHTML="Listening...";
+    else if(inT)statusEl.innerHTML="&#9989; In Tune!";
+    else if(S.tunerCents>0)statusEl.innerHTML="&#8595; Too sharp (+"+S.tunerCents+"&#162;)";
+    else statusEl.innerHTML="&#8593; Too flat ("+S.tunerCents+"&#162;)";
+    statusEl.style.color=tC;
+  }
+
+  // Update string highlights
+  if(stringsEl){
+    var btns=stringsEl.children;
+    for(var i=0;i<btns.length&&i<GUITAR_STRINGS.length;i++){
+      var gs=GUITAR_STRINGS[i];
+      var mt=S.tunerNote===gs.note;
+      var sInT=mt&&Math.abs(S.tunerCents)<5;
+      var sC=sInT?"#4ECDC4":mt&&Math.abs(S.tunerCents)<15?"#FFE66D":"#FF6B6B";
+      btns[i].style.background=mt?sC+"22":"var(--chip-bg)";
+      btns[i].style.borderColor=mt?sC:"var(--border)";
+      btns[i].firstChild.style.color=mt?sC:"var(--text-muted)";
+    }
+  }
+}
+
 function homePage(){
   var h='<div class="tabs" role="tablist">';
   var allTabs=[[TAB.PRACTICE,"\uD83C\uDFB6"],[TAB.DRILL,"\u26A1"],[TAB.DAILY,"\uD83C\uDFC5"],[TAB.QUIZ,"\uD83E\uDDE0"],[TAB.EAR,"\uD83D\uDC42"],[TAB.STRUM,"\uD83C\uDFBC"],[TAB.SONGS,"\uD83C\uDFB5"],[TAB.RHYTHM,"\uD83E\uDD41"],[TAB.RUNNER,"\uD83C\uDFAE"],[TAB.BUILD,"\uD83D\uDD27"],[TAB.TUNER,"\uD83C\uDFA4"],[TAB.STATS,"\uD83D\uDCCA"],[TAB.GUIDE,"\uD83D\uDCD6"]];
@@ -596,7 +640,7 @@ function buildTab(){
 // ===== TUNER TAB =====
 function tunerTab(){
   var h='<div class="card"><div class="text-center"><h3 style="font-size:20px;font-weight:800;color:var(--text-primary);margin:0 0 8px">&#127925; Guitar Tuner</h3><p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">Standard tuning: E A D G B e</p>';
-  h+='<div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap">';
+  h+='<div id="tuner-strings" style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap">';
   for(var i=0;i<GUITAR_STRINGS.length;i++){
     var gs=GUITAR_STRINGS[i],mt=S.tunerNote===gs.note,inT=mt&&Math.abs(S.tunerCents)<5,tC=inT?"#4ECDC4":mt&&Math.abs(S.tunerCents)<15?"#FFE66D":"#FF6B6B";
     h+='<div style="background:'+(mt?tC+"22":"var(--chip-bg)")+';border:2px solid '+(mt?tC:"var(--border)")+';border-radius:12px;padding:8px 14px;text-align:center;min-width:44px"><div style="font-size:18px;font-weight:800;color:'+(mt?tC:"var(--text-muted)")+'">'+gs.note+'</div><div style="font-size:9px;color:var(--text-muted)">'+gs.freq+'Hz</div></div>';
@@ -604,9 +648,9 @@ function tunerTab(){
   h+='</div>';
   if(S.tunerActive){
     var inT=Math.abs(S.tunerCents)<5,tC=inT?"#4ECDC4":Math.abs(S.tunerCents)<15?"#FFE66D":"#FF6B6B";
-    h+='<div style="font-size:72px;font-weight:900;color:'+tC+';line-height:1">'+(S.tunerNote||"&#8212;")+'</div><div style="font-size:16px;color:var(--text-muted);margin:4px 0 16px">'+(S.tunerFreq>0?S.tunerFreq+" Hz":"Play a note...")+'</div>';
-    h+='<div style="position:relative;height:40px;background:var(--input-bg);border-radius:20px;margin:0 auto 16px;max-width:300px;overflow:hidden"><div style="position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--text-primary);z-index:2"></div><div style="position:absolute;left:'+(50+S.tunerCents/2)+'%;top:4px;bottom:4px;width:12px;border-radius:6px;background:'+tC+';transition:left .15s;transform:translateX(-50%);z-index:3"></div><div style="position:absolute;top:50%;left:16px;transform:translateY(-50%);font-size:11px;color:var(--text-muted)">&#9837; flat</div><div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);font-size:11px;color:var(--text-muted)">sharp &#9839;</div></div>';
-    h+='<div style="font-size:14px;font-weight:700;color:'+tC+';margin-bottom:16px">';
+    h+='<div id="tuner-note-display" style="font-size:72px;font-weight:900;color:'+tC+';line-height:1">'+(S.tunerNote||"&#8212;")+'</div><div id="tuner-freq-display" style="font-size:16px;color:var(--text-muted);margin:4px 0 16px">'+(S.tunerFreq>0?S.tunerFreq+" Hz":"Play a note...")+'</div>';
+    h+='<div style="position:relative;height:40px;background:var(--input-bg);border-radius:20px;margin:0 auto 16px;max-width:300px;overflow:hidden"><div style="position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--text-primary);z-index:2"></div><div id="tuner-needle" style="position:absolute;left:'+(50+S.tunerCents/2)+'%;top:4px;bottom:4px;width:12px;border-radius:6px;background:'+tC+';transition:left .15s;transform:translateX(-50%);z-index:3"></div><div style="position:absolute;top:50%;left:16px;transform:translateY(-50%);font-size:11px;color:var(--text-muted)">&#9837; flat</div><div style="position:absolute;top:50%;right:16px;transform:translateY(-50%);font-size:11px;color:var(--text-muted)">sharp &#9839;</div></div>';
+    h+='<div id="tuner-status" style="font-size:14px;font-weight:700;color:'+tC+';margin-bottom:16px">';
     if(!S.tunerFreq)h+="Listening...";
     else if(inT)h+="&#9989; In Tune!";
     else if(S.tunerCents>0)h+="&#8595; Too sharp (+"+S.tunerCents+"&#162;)";
