@@ -5,3 +5,5 @@ resources/
 .freesound_token.json
 .claude/
 nul
+nul
+*.zip

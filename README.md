@@ -1,85 +1,117 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/JavaScript-Vanilla-f7df1e?style=flat-square&logo=javascript" />
-  <img src="https://img.shields.io/badge/Electron-34-47848f?style=flat-square&logo=electron" />
-  <img src="https://img.shields.io/badge/Tauri-Ready-ffc131?style=flat-square&logo=tauri" />
-  <img src="https://img.shields.io/badge/Platform-Multi-blueviolet?style=flat-square" />
+  <img src="https://img.shields.io/badge/JavaScript-ES2024-f7df1e?style=for-the-badge&logo=javascript&logoColor=black" />
+  <img src="https://img.shields.io/badge/Electron-34-47848f?style=for-the-badge&logo=electron&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tauri-2.0-ffc131?style=for-the-badge&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/Capacitor-Mobile-119eff?style=for-the-badge&logo=capacitor&logoColor=white" />
 </p>
 
-# ChordSpark
+<h1 align="center">🎸 ChordSpark</h1>
 
-> Guitar chord learning app with practice tracking, drill modes, games, and ear training
+<p align="center">
+  <strong>Guitar chord learning app with practice tracking, drill modes, games, and ear training</strong>
+</p>
 
----
-
-### Highlights
-
-| Feature | Description |
-|:--------|:------------|
-| **Chord Library** | Full chord database with diagrams, finger positions, and audio playback |
-| **Practice Sessions** | Timed practice with progress tracking and streak counting |
-| **Guided Lessons** | Step-by-step lessons from beginner open chords to advanced barre chords |
-| **Drill Mode** | Rapid-fire chord recognition and transition drills |
-| **Games** | Interactive chord games to make practice fun |
-| **Song Library** | Play along with songs using real chord progressions |
-| **Dual Mode** | Side-by-side chord comparison for transitions |
-| **Audio Playback** | Real guitar chord audio samples (WAV) |
-| **Progress Tracking** | Track your practice time, accuracy, and improvement |
+<p align="center">
+  <em>Desktop &bull; Mobile &bull; Web &mdash; one codebase, every platform</em>
+</p>
 
 ---
 
-### Tech Stack
+## ✨ Features
 
-```
-Language        Vanilla JavaScript (zero framework dependencies)
-Desktop         Electron 34  |  Tauri (Rust backend)  |  Capacitor (mobile)
-Audio           Web Audio API  +  WAV chord samples
-Storage         localStorage for progress data
-Server          Express.js dev server with hot reload
-```
+<table>
+<tr>
+<td width="50%">
 
-### Quick Start
+### 🎵 Learn
+- **Chord Library** &mdash; Full chord database with diagrams and audio
+- **Guided Lessons** &mdash; Beginner to advanced, step by step
+- **Song Library** &mdash; Play along with real chord progressions
+
+</td>
+<td width="50%">
+
+### 🏋️ Practice
+- **Drill Mode** &mdash; Rapid-fire chord recognition
+- **Timed Sessions** &mdash; Track practice with streaks
+- **Dual Mode** &mdash; Side-by-side chord comparison
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 🎮 Play
+- **Chord Games** &mdash; Interactive challenges
+- **Ear Training** &mdash; Identify chords by sound
+- **Progress Stats** &mdash; Track accuracy over time
+
+</td>
+<td>
+
+### 🔊 Audio
+- **Real Guitar Samples** &mdash; WAV chord recordings
+- **Web Audio API** &mdash; Low-latency playback
+- **Freesound Integration** &mdash; Extended sound library
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🚀 Quick Start
 
 ```bash
 npm install
-npm start                      # Electron desktop app
-# or
-npm run tauri:dev              # Tauri desktop app
+npm start          # 🖥️ Electron desktop
+npm run tauri:dev  # ⚡ Tauri (lightweight)
 ```
 
-### Project Structure
+Or just open `index.html` in any browser.
+
+## 🌐 Multi-Platform
+
+| Platform | Command | Engine |
+|:---------|:--------|:-------|
+| 🖥️ **Windows / Mac / Linux** | `npm start` | Electron 34 |
+| ⚡ **Lightweight Native** | `npm run tauri:dev` | Tauri (Rust) |
+| 📱 **iOS / Android** | `npx cap run` | Capacitor |
+| 🌐 **Web Browser** | Open `index.html` | None needed |
+
+## 📁 Structure
 
 ```
 chordspark/
-  index.html                   # Main app entry
-  js/
-    app.js                     # App coordinator
-    audio.js                   # Audio playback engine
-    data.js                    # Chord database
-    state.js                   # State management
-    ui.js                      # UI rendering
-    pages/
-      practice.js              # Practice session mode
-      guided.js                # Guided lessons
-      songs.js                 # Song library
-      games.js                 # Chord games
-      dual.js                  # Dual chord comparison
-      session.js               # Session tracking
-      tools.js                 # Tuner, metronome, tools
-  guitar_chords/               # WAV audio samples
-  server/
-    server.js                  # Express dev server
-  styles.css                   # App styling
+├── 🎵 guitar_chords/        Real WAV chord audio samples
+├── 📄 index.html             App entry point
+├── 🎨 styles.css             Styling
+├── js/
+│   ├── app.js                App coordinator
+│   ├── audio.js              Audio playback engine
+│   ├── data.js               Chord database
+│   ├── state.js              State management
+│   ├── ui.js                 UI rendering
+│   └── pages/
+│       ├── practice.js       Practice sessions
+│       ├── guided.js         Guided lessons
+│       ├── songs.js          Song library
+│       ├── games.js          Chord games
+│       ├── dual.js           Dual comparison
+│       ├── session.js        Session tracking
+│       └── tools.js          Tuner, metronome
+└── server/
+    └── server.js             Express dev server
 ```
 
-### Multi-Platform
+## 🎹 Sister App
 
-| Platform | Command | Status |
-|:---------|:--------|:-------|
-| Electron (Windows/Mac/Linux) | `npm start` | Ready |
-| Tauri (lightweight native) | `npm run tauri:dev` | Ready |
-| Capacitor (iOS/Android) | `npx cap run` | Configured |
-| Web browser | Open `index.html` | Works |
+PianoSpark shares content with ChordSpark &mdash; same lessons, same format, different instrument.
+
+**[PianoSpark &rarr;](https://github.com/scomofo/Pianospark)**
 
 ---
 
-*Built by Scott Morley*
+<p align="center">
+  <sub>Built by Scott Morley</sub>
+</p>
