@@ -1,8 +1,19 @@
 // ===== TIMERS =====
+// Variable reinforcement schedule: reward density thins as sessions accumulate
+// (Stretching the Ratios — builds extinction-resistant practice habits)
+function shouldFireReward(){
+  var n=S.sessions;
+  if(n<=5)return true;          // Phase 1: continuous (sessions 1-5)
+  if(n<=14)return Math.random()<0.33; // Phase 2: VR-3 (sessions 6-14)
+  if(n<=30)return Math.random()<0.14; // Phase 3: VR-7 (sessions 15-30)
+  return Math.random()<0.10;    // Phase 4: VR-10 (sessions 30+)
+}
+
 function tickS(){
   if(S.timerActive&&S.timer>0){
     S.timer--;
-    if(S.timer%30===0&&S.timer>0){snd("tick");S.xp+=5;S.xpToast={amount:5,time:Date.now()};saveState();}
+    if(S.timer%30===0&&S.timer>0&&shouldFireReward()){snd("tick");S.xp+=5;S.xpToast={amount:5,time:Date.now()};saveState();}
+    else if(S.timer%30===0&&S.timer>0){S.xp+=5;} // silent XP accrual when toast skipped
     if(S.timer===60)fireMicro("halfway","Halfway there!","&#128170;");
     addPracticeSecond();
     render();T.session=setTimeout(tickS,1000);
@@ -10,14 +21,20 @@ function tickS(){
     S.timerActive=false;clearTimeout(T.session);
     if(S.metronomeOn)stopMetronome();
     if(S.chordDetectOn)stopChordDetect();
-    snd("complete");S.xp+=10;S.sessions++;S.streak++;
-    S.lastSessionDate=new Date().toDateString();
+    S.sessions++;S.streak++;
+    S.lastSessionDate=new Date().toISOString().split("T")[0];
+    // Jackpot: 1-in-15 chance of surprise XP bonus (RPE optimisation)
+    var jackpot=Math.random()<(1/15);
+    var xpEarned=jackpot?50:10;
+    S.xp+=xpEarned;
+    S.xpToast={amount:xpEarned,time:Date.now(),jackpot:jackpot};
+    if(jackpot){snd("levelup");}else{snd("complete");}
     var k=S.currentChord.name;
     S.chordProgress[k]=Math.min((S.chordProgress[k]||0)+34,100);
     var a=true;var ch=CHORDS[S.level]||[];
     for(var i=0;i<ch.length;i++)if((S.chordProgress[ch[i].name]||0)<100)a=false;
-    if(a&&S.level<3){S.level++;snd("levelup");}
-    logHistory("session",k,10);
+    if(a&&S.level<8){S.level++;snd("levelup");}
+    logHistory("session",k,xpEarned);
     checkBadges();saveState();trigC();S.screen=SCR.COMPLETE;render();
   }
 }
@@ -25,10 +42,14 @@ function tickS(){
 function tickD(){
   if(S.screen===SCR.DRILL&&S.drillTimer>0){
     S.drillTimer--;
-    if(S.drillTimer%30===0&&S.drillTimer>0){snd("tick");S.xp+=5;S.xpToast={amount:5,time:Date.now()};saveState();}
-    addPracticeSecond();render();T.drill=setTimeout(tickD,1000);
+    if(S.drillTimer%30===0&&S.drillTimer>0&&shouldFireReward()){snd("tick");S.xp+=5;S.xpToast={amount:5,time:Date.now()};saveState();}
+    else if(S.drillTimer%30===0&&S.drillTimer>0){S.xp+=5;}
+    addPracticeSecond();
+    if(!updateDrillTimerUI())render(); // partial update if elements exist
+    T.drill=setTimeout(tickD,1000);
   } else if(S.screen===SCR.DRILL&&S.drillTimer<=0){
     clearTimeout(T.drill);snd("complete");S.drillCount++;S.xp+=20;
+    S.xpToast={amount:20,time:Date.now()};
     var detail=S.drillChords.map(function(c){return c.name;}).join(" / ");
     logHistory("drill",detail,20);
     checkBadges();saveState();trigC();S.screen=SCR.DRILL_DONE;render();
@@ -37,18 +58,21 @@ function tickD(){
 
 function tickDy(){
   if(S.screen===SCR.DAILY&&S.dailyTimer>0&&!S.dailyComplete){
-    S.dailyTimer--;addPracticeSecond();render();T.daily=setTimeout(tickDy,1000);
+    S.dailyTimer--;addPracticeSecond();
+    if(!updateDailyTimerUI())render(); // partial update if elements exist
+    T.daily=setTimeout(tickDy,1000);
   } else if(S.screen===SCR.DAILY&&S.dailyTimer<=0&&!S.dailyComplete){
     clearTimeout(T.daily);snd("complete");S.dailyComplete=true;S.dailyDone++;
     var xp=(S.dailyChallenge&&S.dailyChallenge.xp)||40;
-    S.xp+=xp;
+    S.xp+=xp;S.xpToast={amount:xp,time:Date.now()};
     logHistory("daily",S.dailyChallenge?S.dailyChallenge.title:"Challenge",xp);
     checkBadges();saveState();trigC();render();
   }
 }
 
 function genQ(){
-  var av=S.level>=3?ALL_CHORDS:S.level>=2?[].concat(CHORDS[1],CHORDS[2]):CHORDS[1];
+  var av=[];for(var _l=1;_l<=S.level;_l++)av=av.concat(CHORDS[_l]||[]);
+  if(!av.length)av=CHORDS[1];
   var q=av[Math.floor(Math.random()*av.length)];
   var opts=[q];
   while(opts.length<3){
@@ -183,7 +207,7 @@ function runnerTick(){
 }
 
 // ===== COMMUNITY API =====
-var COMMUNITY_URL="http://localhost:3456";
+var COMMUNITY_URL="https://localhost:3456";
 if(!COMMUNITY_URL.startsWith("https")&&COMMUNITY_URL.indexOf("localhost")===-1&&COMMUNITY_URL.indexOf("127.0.0.1")===-1)
   console.warn("ChordSpark: Community URL should use HTTPS for non-local servers");
 
@@ -323,6 +347,7 @@ window.act=function(a,v){
     var c1=av[Math.floor(Math.random()*av.length)],c2=c1,n=0;
     while(c2.name===c1.name&&av.length>1&&n<20){c2=av[Math.floor(Math.random()*av.length)];n++;}
     S.drillChords=[c1,c2];S.drillIdx=0;S.drillTimer=60;S.drillSwitches=0;S.drillLastSwitchTime=Date.now();
+    S.drillAdaptiveBpm=60;S.drillConsecutiveFast=0;S.drillConsecutiveSlow=0;
     _prevChordKey=c1.name;
     snd("start");S.screen=SCR.DRILL;render();T.drill=setTimeout(tickD,1000);return;
   }
@@ -340,6 +365,22 @@ window.act=function(a,v){
       ts.avgTime=(ts.avgTime*ts.attempts+elapsed)/(ts.attempts+1);
       ts.attempts++;
       if(elapsed<ts.best)ts.best=elapsed;
+      // Adaptive BPM: adjust target tempo based on switch speed performance
+      var targetSecs=60/S.drillAdaptiveBpm;
+      if(elapsed<targetSecs*0.8){
+        S.drillConsecutiveFast++;S.drillConsecutiveSlow=0;
+        if(S.drillConsecutiveFast>=3){
+          S.drillAdaptiveBpm=Math.min(S.drillAdaptiveBpm+3,160);
+          S.drillConsecutiveFast=0;
+          fireMicro("speed_up","Speeding up!","&#9654;&#65039;");
+        }
+      }else if(elapsed>targetSecs*1.5){
+        S.drillConsecutiveSlow++;S.drillConsecutiveFast=0;
+        if(S.drillConsecutiveSlow>=2){
+          S.drillAdaptiveBpm=Math.max(S.drillAdaptiveBpm-5,40);
+          S.drillConsecutiveSlow=0;
+        }
+      }else{S.drillConsecutiveFast=0;S.drillConsecutiveSlow=0;}
     }
     _prevChordKey=fromChord;
     S.drillIdx=(S.drillIdx+1)%2;S.drillSwitches++;
@@ -356,6 +397,7 @@ window.act=function(a,v){
     }
     if(c1&&c2){
       S.drillChords=[c1,c2];S.drillIdx=0;S.drillTimer=60;S.drillSwitches=0;S.drillLastSwitchTime=Date.now();
+      S.drillAdaptiveBpm=60;S.drillConsecutiveFast=0;S.drillConsecutiveSlow=0;
       _prevChordKey=c1.name;
       snd("start");S.screen=SCR.DRILL;render();T.drill=setTimeout(tickD,1000);
     }return;
@@ -383,7 +425,7 @@ window.act=function(a,v){
   }
   // === Ear Training ===
   if(a==="startEarTrain"){
-    var av=S.level>=3?ALL_CHORDS:S.level>=2?[].concat(CHORDS[1],CHORDS[2]):CHORDS[1];
+    var av=[];for(var _l=1;_l<=S.level;_l++)av=av.concat(CHORDS[_l]||[]);if(!av.length)av=CHORDS[1];
     var q=av[Math.floor(Math.random()*av.length)];
     var opts=[q.name];
     while(opts.length<4){
@@ -451,7 +493,7 @@ window.act=function(a,v){
   // === Tuner ===
   if(a==="startTuner"){
     if(!AC){S.tunerErr="Audio not supported";render();return;}
-    navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+    navigator.mediaDevices.getUserMedia(getAudioConstraint()).then(function(st){
       tunerR.stream=st;var ctx=new AC(),src=ctx.createMediaStreamSource(st),an=ctx.createAnalyser();
       an.fftSize=8192;src.connect(an); // Larger buffer for better low-freq accuracy
       tunerR.ctx=ctx;tunerR.analyser=an;S.tunerActive=true;S.tunerErr=null;
@@ -498,6 +540,107 @@ window.act=function(a,v){
   if(a==="toggleChordDetect"){if(S.chordDetectOn)stopChordDetect();else startChordDetect();return;}
   // Dark mode toggle
   if(a==="toggleDark"){S.darkMode=!S.darkMode;saveState();applyTheme();render();return;}
+  // Onboarding
+  if(a==="setIntention"){S.practiceIntention=v||"";return;}
+  if(a==="completeOnboarding"){S.onboardingDone=true;saveState();render();return;}
+  // Song sorting
+  if(a==="songSort"){
+    if(S.songSort===v){S.songSortAsc=!S.songSortAsc;}
+    else{S.songSort=v;S.songSortAsc=true;}
+    render();return;
+  }
+  if(a==="songFilter"){S.songFilter=v||"";render();return;}
+  // Stem solo
+  if(a==="stemSolo"){
+    for(var sk in S.stemToggles)S.stemToggles[sk]=(sk===v);
+    for(var sk in S.stemToggles)setStemMuted(sk,!S.stemToggles[sk]);
+    render();return;
+  }
+  if(a==="stemAll"){
+    for(var sk in S.stemToggles){S.stemToggles[sk]=true;setStemMuted(sk,false);}
+    render();return;
+  }
+  // Finger exercises
+  if(a==="startFingerEx"){
+    var ex=null;
+    for(var fi=0;fi<FINGER_EXERCISES.length;fi++)if(FINGER_EXERCISES[fi].id===v){ex=FINGER_EXERCISES[fi];break;}
+    if(!ex)return;
+    S.fingerExId=v;S.fingerExTimer=ex.duration;S.fingerExActive=true;S.fingerExCount=0;
+    snd("start");
+    clearInterval(T.drill);
+    T.drill=setInterval(function(){
+      if(!S.fingerExActive)return;
+      S.fingerExTimer--;
+      addPracticeSecond();
+      if(S.fingerExTimer<=0){
+        clearInterval(T.drill);S.fingerExActive=false;
+        snd("complete");S.xp+=10;
+        if(typeof S.fingerStats!=="object"||S.fingerStats===null)S.fingerStats={};
+        S.fingerStats[v]=(S.fingerStats[v]||0)+1;
+        S.xpToast={amount:10,time:Date.now()};
+        saveState();
+      }
+      render();
+    },1000);
+    render();return;
+  }
+  if(a==="stopFingerEx"){
+    clearInterval(T.drill);S.fingerExActive=false;S.fingerExId=null;render();return;
+  }
+  // Guided sessions
+  if(a==="guidedStart"){
+    var plan=GUITAR_SESSIONS[S.guidedSession-1];
+    if(!plan){S.guidedSession=1;plan=GUITAR_SESSIONS[0];}
+    S.guidedPlan=plan;S.guidedStep="spark";S.newMovePhase=null;S.guidedPaused=false;
+    S.screen=SCR.GUIDED;snd("start");render();return;
+  }
+  if(a==="guidedNext"){
+    var steps=["spark","review","newMove","songSlice","victoryLap"];
+    var idx=steps.indexOf(S.guidedStep);
+    if(idx<steps.length-1){
+      S.guidedStep=steps[idx+1];
+      if(S.guidedStep==="newMove")S.newMovePhase="watch";
+    }
+    render();return;
+  }
+  if(a==="guidedAdvancePhase"){
+    var phases=["watch","shadow","try","refine"];
+    var pi=phases.indexOf(S.newMovePhase);
+    if(pi<phases.length-1){S.newMovePhase=phases[pi+1];}
+    else{act("guidedNext");return;} // refine done → advance to songSlice
+    render();return;
+  }
+  if(a==="guidedComplete"){
+    if(S.metronomeOn)stopMetronome();
+    var plan=S.guidedPlan;
+    if(plan){
+      if(!Array.isArray(S.completedGuidedSessions))S.completedGuidedSessions=[];
+      if(S.completedGuidedSessions.indexOf(plan.num)<0)S.completedGuidedSessions.push(plan.num);
+      S.xp+=30;S.sessions++;S.streak++;
+      S.lastSessionDate=new Date().toISOString().split("T")[0];
+      if(plan.newMove&&plan.newMove.chord){
+        var k=plan.newMove.chord;
+        S.chordProgress[k]=Math.min((S.chordProgress[k]||0)+25,100);
+      }
+      S.guidedSession=Math.min(GUITAR_SESSIONS.length,plan.num+1);
+      logHistory("guided","Session "+plan.num+": "+plan.title,30);
+      checkBadges();
+    }
+    S.xpToast={amount:30,time:Date.now()};
+    saveState();trigC();S.screen=SCR.GUIDED_DONE;render();return;
+  }
+  if(a==="guidedStop"){
+    if(S.metronomeOn)stopMetronome();
+    S.screen=SCR.HOME;S.tab=TAB.PRACTICE;render();return;
+  }
+  // Dual instrument
+  if(a==="dualChord"){S.dualChord=v;render();return;}
+  if(a==="toggleAnchor"){S.dualAnchorOn=!S.dualAnchorOn;render();return;}
+  if(a==="dualPreview"){
+    // Play chord on both instruments
+    strumChord(v);
+    render();return;
+  }
   // Practice Goal
   if(a==="setGoal"){
     var g=parseInt(v);
@@ -552,6 +695,7 @@ window.act=function(a,v){
       var c1=pool[Math.floor(Math.random()*pool.length)],c2=c1,n=0;
       while(c2.name===c1.name&&pool.length>1&&n<20){c2=pool[Math.floor(Math.random()*pool.length)];n++;}
       S.drillChords=[c1,c2];S.drillIdx=0;S.drillTimer=60;S.drillSwitches=0;S.drillLastSwitchTime=Date.now();
+      S.drillAdaptiveBpm=60;S.drillConsecutiveFast=0;S.drillConsecutiveSlow=0;
       _prevChordKey=c1.name;
       snd("start");S.screen=SCR.DRILL;render();T.drill=setTimeout(tickD,1000);
     }return;
@@ -684,19 +828,35 @@ window.act=function(a,v){
       reader.onload=function(ev){
         try{
           var imported=JSON.parse(ev.target.result);
-          if(!imported.data){throw new Error("Invalid format");}
+          if(!imported.data||typeof imported.data!=="object"){throw new Error("Invalid format");}
+          // Validate types before assignment
+          var typeChecks={
+            xp:"number",streak:"number",sessions:"number",drillCount:"number",
+            dailyDone:"number",quizCorrect:"number",songsPlayed:"number",
+            level:"number",soundOn:"boolean",darkMode:"boolean",
+            selectedLevel:"number",earTrainScore:"number",
+            dailyGoalMinutes:"number",todayPracticeSeconds:"number",
+            goalReachedToday:"boolean",goalStreak:"number",focusMode:"boolean",
+            runnerHighScore:"number"
+          };
+          var arrayFields=["history","customSets","earnedBadges","importedSongs"];
+          var objectFields=["chordProgress","transitionStats"];
           for(var k in imported.data){
-            if(PERSIST_FIELDS.indexOf(k)!==-1){
-              S[k]=imported.data[k];
-            }
+            if(PERSIST_FIELDS.indexOf(k)===-1)continue;
+            var val=imported.data[k];
+            if(typeChecks[k]&&typeof val!==typeChecks[k])continue; // skip wrong type
+            if(arrayFields.indexOf(k)!==-1&&!Array.isArray(val))continue;
+            if(objectFields.indexOf(k)!==-1&&(typeof val!=="object"||val===null||Array.isArray(val)))continue;
+            S[k]=val;
           }
           if(!Array.isArray(S.history))S.history=[];
           if(!Array.isArray(S.customSets))S.customSets=[];
           if(!Array.isArray(S.importedSongs))S.importedSongs=[];
+          if(typeof S.transitionStats!=="object"||S.transitionStats===null)S.transitionStats={};
           saveState();
           S.importMsg={ok:true,text:"Progress imported successfully!"};
         }catch(err){
-          S.importMsg={ok:false,text:"Invalid backup file"};
+          S.importMsg={ok:false,text:"Invalid backup file: "+(err.message||"unknown error")};
         }
         render();
         setTimeout(function(){S.importMsg=null;render();},3000);
@@ -758,9 +918,13 @@ window.act=function(a,v){
         progression:JSON.parse(song.progression),
         pattern:JSON.parse(song.pattern||'["D","D","U","U","D","U"]')
       };
+      if(!Array.isArray(parsed.chords)||!Array.isArray(parsed.progression)){throw new Error("Invalid song data");}
       S.selectedSong=parsed;S.songPlaying=false;S.songBeat=0;clearInterval(T.song);
       S.screen=SCR.SONG;render();
-    }catch(e){}
+    }catch(e){
+      console.warn("ChordSpark: Failed to parse community song:",e.message);
+      S.communityError="Could not load song: invalid data";render();
+    }
     return;
   }
   if(a==="submitField"){
@@ -915,11 +1079,16 @@ window.act=function(a,v){
   }
   // === Tone Picker ===
   if(a==="setTone"){
-    if(STRUM_TONES[v]){S.strumTone=v;saveState();render();}
+    if(STRUM_TONES[v]||v==="guitar"){S.strumTone=v;saveState();render();}
     return;
   }
   // === Scale Explorer ===
   if(a==="selectScale"){S.selectedScale=v;render();return;}
+  // === Audio Input ===
+  if(a==="refreshAudioInputs"){refreshAudioInputs();return;}
+  if(a==="testAudioInput"){testAudioInput(v);return;}
+  if(a==="stopAudioTest"){stopAudioTest();render();return;}
+  if(a==="selectAudioInput"){stopAudioTest();S.audioInputId=v;saveState();render();return;}
   // === MIDI ===
   if(a==="toggleMidi"){
     S.midiEnabled=!S.midiEnabled;
@@ -943,8 +1112,9 @@ window.act=function(a,v){
 
 // ===== RENDER =====
 function applyTheme(){
-  if(S.darkMode)document.body.classList.add("dark");
-  else document.body.classList.remove("dark");
+  // Dark is default; light mode is the override
+  if(S.darkMode){document.body.classList.remove("light");}
+  else{document.body.classList.add("light");}
 }
 
 var _lastScreen="";
@@ -959,7 +1129,7 @@ function _renderInner(){
   document.getElementById("hdr-str").textContent=S.streak;
   document.getElementById("snd-btn").textContent=S.soundOn?"\uD83D\uDD0A":"\uD83D\uDD07";
   document.getElementById("snd-btn").style.opacity=S.soundOn?1:0.4;
-  document.getElementById("dark-btn").textContent=S.darkMode?"\u2600\uFE0F":"\uD83C\uDF19";
+  document.getElementById("dark-btn").textContent=S.darkMode?"\uD83C\uDF19":"\u2600\uFE0F";
   var app=document.getElementById("app"),h="";
   if(S.showConfetti){
     var cols=["#FF6B6B","#4ECDC4","#45B7D1","#FFE66D","#96CEB4","#FF8A5C"];
@@ -972,9 +1142,13 @@ function _renderInner(){
     h+='<div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#FFE66D,#FF8A5C);border-radius:20px;padding:16px 32px;box-shadow:0 8px 30px rgba(255,138,92,.4);animation:sD .5s ease;text-align:center"><div style="font-size:32px">'+S.newBadge.icon+'</div><div style="font-weight:800;font-size:16px;color:#333">'+S.newBadge.label+'</div><div style="font-size:12px;color:#555">'+S.newBadge.desc+'</div></div>';
   if(S.showUndoToast)
     h+='<div class="undo-toast"><span>Progress reset.</span><button onclick="act(\'undoReset\')">Undo</button><span class="countdown">'+S.undoTimer+'</span></div>';
-  // XP toast
-  if(S.xpToast&&Date.now()-S.xpToast.time<1500)
-    h+='<div style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#4ECDC4,#45B7D1);border-radius:16px;padding:8px 20px;box-shadow:0 4px 15px rgba(78,205,196,.4);animation:sD .3s ease;font-weight:800;color:#fff;font-size:16px">+5 XP!</div>';
+  // XP toast (jackpot gets special fire styling)
+  if(S.xpToast&&Date.now()-S.xpToast.time<1500){
+    if(S.xpToast.jackpot)
+      h+='<div style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#FFE66D,#FF8A5C);border-radius:20px;padding:12px 28px;box-shadow:0 6px 24px rgba(255,138,92,.6);animation:sD .3s ease;font-weight:900;color:#fff;font-size:20px;text-align:center">&#127873; JACKPOT! +'+S.xpToast.amount+' XP!</div>';
+    else
+      h+='<div style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#4ECDC4,#45B7D1);border-radius:16px;padding:8px 20px;box-shadow:0 4px 15px rgba(78,205,196,.4);animation:sD .3s ease;font-weight:800;color:#fff;font-size:16px">+'+S.xpToast.amount+' XP!</div>';
+  }
   // Micro-achievement toast
   if(S.microToast&&Date.now()-S.microToast.time<2000)
     h+='<div style="position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#FFE66D,#FF8A5C);border-radius:16px;padding:10px 24px;box-shadow:0 4px 15px rgba(255,138,92,.4);animation:sD .3s ease;text-align:center"><span style="font-size:20px;margin-right:6px">'+S.microToast.icon+'</span><span style="font-weight:800;color:#333;font-size:15px">'+S.microToast.msg+'</span></div>';
@@ -984,6 +1158,23 @@ function _renderInner(){
     h+='<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#45B7D1,#4ECDC4);border-radius:16px;padding:12px 24px;box-shadow:0 4px 20px rgba(69,183,209,.4);animation:sD .5s ease;text-align:center;max-width:320px"><div style="font-size:20px;margin-bottom:4px">&#9749;</div><div style="font-weight:800;color:#fff;font-size:14px">Nice focus! Take a quick break?</div><div style="font-size:11px;color:rgba(255,255,255,.8);margin:4px 0">You\'ve been practicing for '+Math.floor(_contMin)+' min straight</div><button onclick="act(\'dismissBreak\')" style="margin-top:6px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:10px;padding:6px 16px;color:#fff;font-weight:700;font-size:12px;cursor:pointer">Got it!</button></div>';
   // Shortcut overlay
   if(S.showShortcuts)h+=shortcutOverlay();
+
+  // Onboarding overlay — shown once on first launch
+  if(!S.onboardingDone){
+    h+='<div style="position:fixed;inset:0;z-index:2000;background:var(--body-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;overflow:auto">';
+    h+='<div style="font-size:56px;margin-bottom:12px">&#127930;</div>';
+    h+='<h1 style="font-size:24px;font-weight:900;color:var(--text-primary);margin:0 0 8px">Welcome to ChordSpark!</h1>';
+    h+='<p style="color:var(--text-dim);font-size:14px;margin:0 0 24px;max-width:300px">People who set a specific practice trigger are 2-3x more likely to follow through. Set yours now.</p>';
+    h+='<div class="card" style="width:100%;max-width:340px;text-align:left;margin-bottom:20px">';
+    h+='<p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 8px">Complete this sentence:</p>';
+    h+='<p style="font-size:14px;color:var(--text-muted);margin:0 0 8px">&#8220;Every day, when I&nbsp;&hellip;</p>';
+    h+='<input type="text" id="intention-input" class="set-input" placeholder="finish dinner, make coffee..." value="'+escHTML(S.practiceIntention)+'" oninput="act(\'setIntention\',this.value)" style="margin-bottom:8px" aria-label="Practice trigger"/>';
+    h+='<p style="font-size:14px;color:var(--text-muted);margin:0">&#8230;&nbsp;I will open ChordSpark.&#8221;</p>';
+    h+='</div>';
+    h+='<button class="btn" onclick="act(\'completeOnboarding\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;padding:14px 40px;font-size:17px;font-weight:800">Let\'s Go!</button>';
+    h+='<button onclick="act(\'completeOnboarding\')" style="margin-top:14px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer">Skip for now</button>';
+    h+='</div>';
+  }
 
   var screenKey=S.screen+S.tab;
   var content="";
@@ -998,6 +1189,8 @@ function _renderInner(){
   else if(S.screen===SCR.SONG)content=songDetailPage();
   else if(S.screen===SCR.SONG_DONE)content=songDonePage();
   else if(S.screen===SCR.STEMS)content=stemsPage();
+  else if(S.screen===SCR.GUIDED)content=guidedSessionPage();
+  else if(S.screen===SCR.GUIDED_DONE)content=guidedDonePage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';
@@ -1006,6 +1199,8 @@ function _renderInner(){
     h+=content;
   }
   app.innerHTML=h;
+  // Focus management for modal overlays
+  if(S.showShortcuts){var cb=document.getElementById("shortcut-close-btn");if(cb)cb.focus();}
 }
 
 // ===== KEYBOARD SHORTCUTS =====
@@ -1094,7 +1289,9 @@ document.addEventListener("keydown",function(e){
 S.dailyChallenge=DAILY_CHALLENGES[Math.floor(Date.now()/86400000)%DAILY_CHALLENGES.length];
 applyTheme();
 // Init MIDI if previously enabled
-if(S.midiEnabled){try{initMIDI();}catch(e){}}
+if(S.midiEnabled){try{initMIDI();}catch(e){console.error("ChordSpark: MIDI init failed",e);}}
+// Preload guitar WAV samples
+try{preloadGuitarAudio();}catch(e){console.error("ChordSpark: guitar audio preload failed",e);}
 document.getElementById("no-js").style.display="none";
 document.getElementById("header").style.display="flex";
 document.getElementById("app").style.display="block";

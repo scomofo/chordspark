@@ -13,7 +13,8 @@
     "build:mobile": "node -e \"const fs=require('fs');const p=require('path');function cp(s,d){fs.mkdirSync(d,{recursive:true});fs.readdirSync(s).forEach(f=>{const sp=p.join(s,f),dp=p.join(d,f);fs.statSync(sp).isDirectory()?cp(sp,dp):fs.copyFileSync(sp,dp)});}['index.html','styles.css','icon.png'].forEach(f=>fs.copyFileSync(f,p.join('www',f)));cp('js',p.join('www','js'));console.log('Assets copied to www/')\"",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
-    "cap:ios": "npx cap open ios"
+    "cap:ios": "npx cap open ios",
+    "test": "node tests/test_core.js"
   },
   "author": "ChordSpark",
   "license": "MIT",

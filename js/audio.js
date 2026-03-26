@@ -4,6 +4,76 @@ var audioCtx=null;
 var tunerR={stream:null,analyser:null,ctx:null,anim:null};
 var chordR={stream:null,analyser:null,ctx:null,anim:null};
 
+// ===== GUITAR WAV AUDIO =====
+// Maps chord names (full) to WAV file stems for real guitar samples
+var CHORD_FILE_MAP={
+  "E Major":"E","A Major":"A","D Major":"D","G Major":"G","C Major":"C",
+  "B Major":"B","F Major":"F",
+  "E Minor":"Em","A Minor":"Am","D Minor":"Dm","B Minor":"Bm","F Minor":"Fm",
+  "F# Minor":"F#m",
+  "G7":"G7","C7":"C7","A7":"A7","E7":"E7","D7":"D7","B7":"B7",
+  "Am7":"Am7","Em7":"Em7","Dm7":"Dm7",
+  "Dsus2":"Dsus2","Dsus4":"Dsus4","Asus2":"Asus2","Asus4":"Asus4",
+  "Cadd9":"Cadd9","Gadd9":"Gadd9",
+  "E5 Power":"E5","E5":"E5","A5":"A5",
+  "Em7 Full":"Em7","F Mini Barre":"F",
+  "G Minor":"Gm","C Minor":"Cm",
+  "F Major 7":"Fmaj7"
+};
+var GUITAR_AUDIO_BASE="./guitar_chords/";
+var _chordAudioCache={};
+var _chordAudioCacheOrder=[]; // insertion-order keys for LRU eviction
+var _CHORD_AUDIO_CACHE_MAX=30;
+var _guitarAudioReady=false;
+
+function preloadGuitarAudio(){
+  // Only preload if guitar tone is active to avoid ERR_FILE_NOT_FOUND spam
+  if(typeof S!=="undefined"&&S.strumTone!=="guitar")return;
+  var keys=Object.keys(CHORD_FILE_MAP);
+  for(var i=0;i<keys.length;i++){
+    var fileStem=CHORD_FILE_MAP[keys[i]];
+    if(_chordAudioCache[fileStem])continue;
+    try{
+      var audio=new Audio(GUITAR_AUDIO_BASE+"chord_"+fileStem+".wav");
+      audio.preload="auto";
+      audio.onerror=function(){};// suppress console errors for missing files
+      _cacheAudio(fileStem,audio);
+    }catch(e){}
+  }
+  _guitarAudioReady=true;
+}
+
+function _cacheAudio(fileStem,audio){
+  if(!_chordAudioCache[fileStem]){
+    // Evict oldest entry if cache is full
+    if(_chordAudioCacheOrder.length>=_CHORD_AUDIO_CACHE_MAX){
+      var oldest=_chordAudioCacheOrder.shift();
+      try{_chordAudioCache[oldest].src="";}catch(e){}
+      delete _chordAudioCache[oldest];
+    }
+    _chordAudioCacheOrder.push(fileStem);
+  }
+  _chordAudioCache[fileStem]=audio;
+}
+
+function playGuitarChord(chordName){
+  var fileStem=CHORD_FILE_MAP[chordName];
+  if(!fileStem)return false;
+  var audio=_chordAudioCache[fileStem];
+  if(!audio){
+    // Lazy-load on first use
+    try{
+      audio=new Audio(GUITAR_AUDIO_BASE+"chord_"+fileStem+".wav");
+      _cacheAudio(fileStem,audio);
+    }catch(e){return false;}
+  }
+  try{
+    audio.currentTime=0;
+    audio.play().catch(function(e){console.warn("ChordSpark: Guitar audio play failed:",e.message);});
+    return true;
+  }catch(e){return false;}
+}
+
 // Note frequencies (octave 4)
 var NOTE_FREQ={
   "C":261.63,"C#":277.18,"D":293.66,"D#":311.13,"E":329.63,
@@ -57,11 +127,17 @@ function makeDistortionCurve(amount){
 function strumChord(chordName){
   try{
     if(!audioCtx&&AC)audioCtx=new AC();
-    if(!audioCtx)return;
-    if(audioCtx.state==="suspended")audioCtx.resume();
+    if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();
     var notes=CHORD_NOTES[chordName];
-    if(!notes||notes.length===0)return;
+    if(!notes||notes.length===0){console.warn("ChordSpark: No notes for chord:",chordName);return;}
     sendMIDINotes(chordName);
+    // Use real guitar WAV when "guitar" tone is selected
+    if(S.strumTone==="guitar"){
+      if(playGuitarChord(chordName))return;
+      // Fall through to synth if WAV not available
+      console.log("ChordSpark: Guitar WAV not available for",chordName,"- using synth");
+    }
+    if(!audioCtx){console.warn("ChordSpark: No AudioContext available");return;}
     var tone=STRUM_TONES[S.strumTone]||STRUM_TONES.classic;
     var freqs=[];
     for(var i=0;i<notes.length;i++){
@@ -132,7 +208,7 @@ var _tunerHistorySize=5; // frames to average
 var _tunerLastStableNote="";
 var _tunerLastStableCents=0;
 var _tunerStableCount=0;
-var _tunerStableThreshold=3; // consecutive same-note frames to accept
+var _tunerStableThreshold=5; // consecutive same-note frames to accept (higher = less flicker)
 
 function autoCorrelate(buf,sr){
   var sz=buf.length,rms=0;
@@ -268,10 +344,10 @@ function detectFromFFT(analyser,sampleRate){
   var noiseFloor=allVals[Math.floor(allVals.length*0.5)]; // median as noise floor
 
   // Reject if signal too weak (less than 30dB above noise)
-  if(maxVal<-60||maxVal-noiseFloor<25)return [];
+  if(maxVal<-55||maxVal-noiseFloor<30)return [];
 
-  // Threshold: 40% of dynamic range above noise (more permissive to catch quieter strings)
-  var threshold=noiseFloor+(maxVal-noiseFloor)*0.35;
+  // Threshold: 45% of dynamic range above noise
+  var threshold=noiseFloor+(maxVal-noiseFloor)*0.45;
 
   // Harmonic Product Spectrum (HPS) to find fundamental frequencies
   // Downsample the spectrum and multiply — fundamentals align, harmonics don't
@@ -290,7 +366,7 @@ function detectFromFFT(analyser,sampleRate){
   var peaks=[];
   for(var i=6;i<hpsLen-6;i++){
     var freq=i*binSize;
-    if(freq<70||freq>1200)continue; // guitar fundamental range
+    if(freq<60||freq>2000)continue; // guitar fundamental range (low E ~82Hz, harmonics up to ~2kHz)
     if(hps[i]<threshold*hpsOrder)continue; // scaled threshold for HPS
     // Local maximum within ±6 bins
     var isPeak=true;
@@ -316,9 +392,9 @@ function detectFromFFT(analyser,sampleRate){
   for(var i=0;i<peaks.length;i++){
     var nn=12*Math.log2(peaks[i].freq/440),nr=Math.round(nn),idx=((nr%12)+12)%12;
     var name=NOTE_NAMES[(idx+9)%12];
-    // Only accept if the peak is close enough to a real note (within 40 cents)
+    // Only accept if the peak is close enough to a real note (within 30 cents)
     var cents=Math.abs((nn-nr)*100);
-    if(cents>40)continue;
+    if(cents>30)continue;
     if(!notes[name]||peaks[i].amp>notes[name])notes[name]=peaks[i].amp;
   }
   return Object.keys(notes);
@@ -338,8 +414,8 @@ function getStableChordNotes(rawNotes){
     }
   }
 
-  // Only include notes detected in at least 40% of recent frames
-  var minCount=Math.max(2,Math.floor(_chordNoteHistory.length*0.4));
+  // Only include notes detected in at least 55% of recent frames
+  var minCount=Math.max(3,Math.floor(_chordNoteHistory.length*0.55));
   var stable=[];
   for(var note in counts){
     if(counts[note]>=minCount)stable.push(note);
@@ -350,11 +426,11 @@ function getStableChordNotes(rawNotes){
 function startChordDetect(){
   if(!AC){S.chordDetectErr="Audio not supported";render();return;}
   _chordNoteHistory=[];_chordFrameCount=0;
-  navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+  navigator.mediaDevices.getUserMedia(getAudioConstraint()).then(function(st){
     chordR.stream=st;
     var ctx=new AC(),src=ctx.createMediaStreamSource(st),an=ctx.createAnalyser();
     an.fftSize=16384; // Higher resolution: ~2.7 Hz/bin at 44.1kHz
-    an.smoothingTimeConstant=0.7; // More temporal smoothing
+    an.smoothingTimeConstant=0.4; // Balanced: less lag, JS-level history handles stability
     src.connect(an);
     chordR.ctx=ctx;chordR.analyser=an;S.chordDetectOn=true;S.chordDetectErr=null;render();
     function det(){
@@ -368,7 +444,11 @@ function startChordDetect(){
         var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
         if(expected.length>0&&found.length>0){
           var hits=0;for(var i=0;i<expected.length;i++)if(found.indexOf(expected[i])!==-1)hits++;
-          S.chordMatch=Math.round((hits/expected.length)*100);
+          // Penalize wrong notes: extra notes not in the chord reduce score
+          var wrong=0;for(var i=0;i<found.length;i++)if(expected.indexOf(found[i])===-1)wrong++;
+          var accuracy=hits/expected.length;
+          var penalty=wrong>0?wrong/(found.length+expected.length):0;
+          S.chordMatch=Math.max(0,Math.round((accuracy-penalty)*100));
         }else{S.chordMatch=-1;}
         // Update only the chord check section, not full DOM rebuild
         updateChordCheckUI();
@@ -401,16 +481,22 @@ function getCoachFeedback(chordName,detectedNotes,expectedNotes){
   if(!chord)return [];
   for(var i=0;i<missing.length;i++){
     var note=missing[i];
-    // Find which string plays this note
+    // Find which string plays this note — prefer fretted (non-open) strings,
+    // then lowest-numbered string when multiple match the same note name
     var stringIdx=-1;
+    var openMatch=-1;
     for(var s=0;s<6;s++){
       if(chord.frets[s]>=0){
         var openNote=GUITAR_STRING_NOTES[s].note;
         var openIdx=NOTE_NAMES.indexOf(openNote);
         var frettedIdx=(openIdx+chord.frets[s])%12;
-        if(NOTE_NAMES[frettedIdx]===note){stringIdx=s;break;}
+        if(NOTE_NAMES[frettedIdx]===note){
+          if(chord.frets[s]>0){stringIdx=s;break;} // prefer fretted
+          else if(openMatch===-1){openMatch=s;}
+        }
       }
     }
+    if(stringIdx===-1)stringIdx=openMatch;
     if(stringIdx>=0){
       if(chord.frets[stringIdx]===0){
         tips.push("The "+STRING_NAMES[stringIdx]+" string ("+note+") should ring open - check your fingers aren't touching it");
@@ -424,15 +510,81 @@ function getCoachFeedback(chordName,detectedNotes,expectedNotes){
   return tips.slice(0,3); // Max 3 tips
 }
 
-// ===== MIDI OUTPUT =====
+// ===== AUDIO INPUT DEVICE SELECTION =====
+function getAudioConstraint(){
+  if(S.audioInputId){
+    return {audio:{deviceId:{exact:S.audioInputId}}};
+  }
+  return {audio:true};
+}
+
+function refreshAudioInputs(){
+  // Request mic permission first so labels are available
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+    st.getTracks().forEach(function(t){t.stop();});
+    return navigator.mediaDevices.enumerateDevices();
+  }).then(function(devices){
+    S.audioInputDevices=[];
+    for(var i=0;i<devices.length;i++){
+      if(devices[i].kind==="audioinput"){
+        S.audioInputDevices.push({id:devices[i].deviceId,name:devices[i].label||"Input "+(S.audioInputDevices.length+1)});
+      }
+    }
+    render();
+  }).catch(function(){});
+}
+
+var _audioTestStream=null,_audioTestCtx=null,_audioTestAnim=null;
+function testAudioInput(deviceId){
+  stopAudioTest();
+  S.audioTestingId=deviceId;S.audioTestLevel=0;render();
+  navigator.mediaDevices.getUserMedia({audio:{deviceId:{exact:deviceId}}}).then(function(st){
+    _audioTestStream=st;
+    _audioTestCtx=new AC();
+    var src=_audioTestCtx.createMediaStreamSource(st);
+    var an=_audioTestCtx.createAnalyser();
+    an.fftSize=512;src.connect(an);
+    var buf=new Float32Array(an.fftSize);
+    function poll(){
+      if(S.audioTestingId!==deviceId)return;
+      an.getFloatTimeDomainData(buf);
+      var peak=0;
+      for(var i=0;i<buf.length;i++){var v=Math.abs(buf[i]);if(v>peak)peak=v;}
+      S.audioTestLevel=Math.round(Math.min(peak*200,100));
+      // Update meter directly to avoid full re-render flicker
+      var el=document.getElementById("audio-test-meter");
+      var lbl=document.getElementById("audio-test-label");
+      if(el){
+        el.style.width=S.audioTestLevel+"%";
+        el.style.background=S.audioTestLevel>10?"#4ECDC4":"var(--text-muted)";
+      }
+      if(lbl){
+        lbl.textContent=S.audioTestLevel>10?"Signal detected — strum to confirm":"No signal — try another device";
+        lbl.style.color=S.audioTestLevel>10?"#4ECDC4":"var(--text-muted)";
+      }
+      _audioTestAnim=requestAnimationFrame(poll);
+    }poll();
+  }).catch(function(){S.audioTestingId="";S.audioTestLevel=0;render();});
+}
+function stopAudioTest(){
+  S.audioTestingId="";S.audioTestLevel=0;
+  if(_audioTestAnim)cancelAnimationFrame(_audioTestAnim);
+  if(_audioTestStream)_audioTestStream.getTracks().forEach(function(t){t.stop();});
+  if(_audioTestCtx)try{_audioTestCtx.close();}catch(e){}
+  _audioTestStream=null;_audioTestCtx=null;_audioTestAnim=null;
+}
+
+// ===== MIDI OUTPUT & INPUT =====
 var _midiAccess=null;
+var _midiInputNotes={}; // currently held MIDI notes {noteNum: true}
 
 function initMIDI(){
   if(!navigator.requestMIDIAccess){S.midiEnabled=false;return;}
   navigator.requestMIDIAccess().then(function(access){
     _midiAccess=access;
     updateMIDIDevices();
-    access.onstatechange=function(){updateMIDIDevices();render();};
+    _setupMIDIInputs();
+    access.onstatechange=function(){updateMIDIDevices();_setupMIDIInputs();render();};
     if(S.midiOutputId){
       var out=_midiAccess.outputs.get(S.midiOutputId);
       if(out)S.midiOutput=out;
@@ -444,6 +596,53 @@ function initMIDI(){
     }
     render();
   }).catch(function(){S.midiEnabled=false;render();});
+}
+
+// MIDI input: listen to all connected MIDI inputs for note on/off
+function _setupMIDIInputs(){
+  if(!_midiAccess)return;
+  _midiAccess.inputs.forEach(function(input){
+    input.onmidimessage=_handleMIDIMessage;
+  });
+}
+
+function _handleMIDIMessage(event){
+  var cmd=event.data[0]&0xf0,note=event.data[1],vel=event.data[2];
+  if(cmd===0x90&&vel>0){
+    // Note On
+    _midiInputNotes[note]=true;
+    _processMIDIChord();
+  }else if(cmd===0x80||(cmd===0x90&&vel===0)){
+    // Note Off
+    delete _midiInputNotes[note];
+  }
+}
+
+function _processMIDIChord(){
+  // Convert held MIDI notes to note names for chord detection
+  var noteNames=[];
+  for(var n in _midiInputNotes){
+    var idx=parseInt(n)%12;
+    noteNames.push(NOTE_NAMES[idx]);
+  }
+  // Deduplicate
+  var unique=[];
+  for(var i=0;i<noteNames.length;i++){
+    if(unique.indexOf(noteNames[i])===-1)unique.push(noteNames[i]);
+  }
+  if(unique.length>=2){
+    // Feed into chord detection
+    S.detectedNotes=unique;
+    var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
+    if(expected.length>0){
+      var hits=0;for(var i=0;i<expected.length;i++)if(unique.indexOf(expected[i])!==-1)hits++;
+      var wrong=0;for(var i=0;i<unique.length;i++)if(expected.indexOf(unique[i])===-1)wrong++;
+      var accuracy=hits/expected.length;
+      var penalty=wrong>0?wrong/(unique.length+expected.length):0;
+      S.chordMatch=Math.max(0,Math.round((accuracy-penalty)*100));
+    }
+    updateChordCheckUI();
+  }
 }
 
 function updateMIDIDevices(){

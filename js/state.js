@@ -1,7 +1,7 @@
 // ===== STATE =====
 var S={
   screen:SCR.HOME,tab:TAB.PRACTICE,xp:0,streak:0,sessions:0,drillCount:0,dailyDone:0,quizCorrect:0,songsPlayed:0,
-  level:1,chordProgress:{},selectedLevel:1,soundOn:true,darkMode:false,
+  level:1,chordProgress:{},selectedLevel:1,soundOn:true,darkMode:true,
   currentChord:null,timer:120,timerActive:false,
   showConfetti:false,earnedBadges:[],newBadge:null,
   drillChords:[],drillIdx:0,drillTimer:60,drillSwitches:0,
@@ -47,11 +47,26 @@ var S={
   strumTone:"classic",
   // Scale Explorer
   selectedScale:"pentatonic",
+  // Audio Input
+  audioInputId:"",audioInputDevices:[],audioTestLevel:0,audioTestingId:"",
   // MIDI Output
   midiEnabled:false,midiOutput:null,midiOutputId:"",midiDevices:[],
   // ADHD-friendly
   xpToast:null,sessionStartTime:0,breakDismissed:false,
   lastChordName:"",focusMode:false,microToast:null,sessionMicros:[],
+  // Onboarding
+  onboardingDone:false,practiceIntention:"",
+  // Dual instrument view
+  dualChord:"G Major",dualAnchorOn:true,
+  // Song sort
+  songSort:"level",songSortAsc:true,songFilter:"",
+  // Adaptive drill
+  drillAdaptiveBpm:60,drillConsecutiveFast:0,drillConsecutiveSlow:0,
+  // Guided sessions
+  guidedSession:1,completedGuidedSessions:[],guidedPlan:null,
+  // Finger exercises
+  fingerExTimer:0,fingerExActive:false,fingerExId:null,fingerExCount:0,fingerStats:{},
+  guidedStep:null,newMovePhase:null,guidedPaused:false,
   // Stem Separation
   stemFile:null,stemStatus:"idle",stemProgress:0,stemError:null,
   stemPaths:null,stemPlaying:false,stemVolume:0.8,stemCurrentTime:0,stemDuration:0,
@@ -73,9 +88,17 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "level","chordProgress","soundOn","darkMode","earnedBadges","selectedLevel","lastSessionDate",
   "history","customSets","earTrainScore","transitionStats",
   "dailyGoalMinutes","todayPracticeSeconds","lastPracticeDate","goalReachedToday","goalStreak",
-  "importedSongs","strumTone","midiEnabled","midiOutputId","lastChordName","focusMode","runnerHighScore"];
+  "importedSongs","strumTone","midiEnabled","midiOutputId","audioInputId","lastChordName","focusMode","runnerHighScore",
+  "onboardingDone","practiceIntention","guidedSession","completedGuidedSessions","fingerStats"];
 
-function saveState(){
+// Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
+var _saveTimer=null;
+function saveState(immediate){
+  if(immediate){_doSave();return;}
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(_doSave,300);
+}
+function _doSave(){
   try{
     var data={};
     for(var i=0;i<PERSIST_FIELDS.length;i++){
@@ -86,7 +109,7 @@ function saveState(){
       data.history=data.history.slice(data.history.length-500);
     }
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
-  }catch(e){}
+  }catch(e){console.error("ChordSpark: saveState failed",e);}
 }
 
 function loadState(){
@@ -104,7 +127,7 @@ function loadState(){
     if(!Array.isArray(S.customSets))S.customSets=[];
     if(typeof S.transitionStats!=="object"||S.transitionStats===null)S.transitionStats={};
     if(!Array.isArray(S.importedSongs))S.importedSongs=[];
-  }catch(e){}
+  }catch(e){console.error("ChordSpark: loadState failed — data may be corrupted",e);}
 }
 
 function resetProgress(){
@@ -114,7 +137,7 @@ function resetProgress(){
     var val=S[PERSIST_FIELDS[i]];
     _undoBackup[PERSIST_FIELDS[i]]=JSON.parse(JSON.stringify(val));
   }
-  try{localStorage.setItem(SAVE_KEY+"_backup",JSON.stringify(_undoBackup));}catch(e){}
+  try{localStorage.setItem(SAVE_KEY+"_backup",JSON.stringify(_undoBackup));}catch(e){console.error("ChordSpark: undo backup save failed",e);}
   // Clear state in memory (localStorage cleared only when undo timer expires)
   S.xp=0;S.streak=0;S.sessions=0;S.drillCount=0;S.dailyDone=0;S.quizCorrect=0;S.songsPlayed=0;
   S.level=1;S.chordProgress={};S.earnedBadges=[];S.selectedLevel=1;S.lastSessionDate=null;
@@ -146,7 +169,7 @@ function undoReset(){
   _undoBackup=null;
   S.showUndoToast=false;
   try{localStorage.removeItem(SAVE_KEY+"_backup");}catch(e){}
-  saveState();render();
+  saveState(true);render();
 }
 
 // Recover from crash during reset undo window
@@ -159,17 +182,19 @@ function recoverFromCrash(){
         if(data[PERSIST_FIELDS[i]]!==undefined)S[PERSIST_FIELDS[i]]=data[PERSIST_FIELDS[i]];
       }
       localStorage.removeItem(SAVE_KEY+"_backup");
-      saveState();
+      saveState(true);
     }
-  }catch(e){}
+  }catch(e){console.error("ChordSpark: recoverFromCrash failed",e);}
 }
 
 function checkStreak(){
-  var today=new Date().toDateString();
+  var today=new Date().toISOString().split("T")[0];
   if(S.lastSessionDate){
+    // Normalise: legacy data may be stored as toDateString() format
     var last=new Date(S.lastSessionDate);
-    var diff=Math.floor((new Date(today)-last)/86400000);
-    if(diff>1){S.streak=0;saveState();}
+    var lastISO=last.toISOString().split("T")[0];
+    var diff=Math.floor((new Date(today)-new Date(lastISO))/86400000);
+    if(diff>1){S.streak=0;saveState(true);}
   }
 }
 

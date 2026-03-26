@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -44,6 +44,16 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  // Enforce Content Security Policy headers
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' file:; connect-src 'self' https://localhost:3456"]
+      }
+    });
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -94,12 +104,17 @@ ipcMain.handle('stems:separate', async (event, filePath) => {
   var demucsBin = path.join(resDir, demucsBinName);
   var modelFile = path.join(resDir, 'ggml-model-htdemucs-6s-f16.bin');
 
-  // Check binary exists
+  // Check binary exists with platform-specific guidance
   if (!fs.existsSync(demucsBin)) {
-    throw new Error(demucsBinName + ' not found at ' + demucsBin + '. Place the compiled binary in the resources/ folder.');
+    var platformHint = process.platform === 'win32'
+      ? 'Build demucs.exe from demucs.cpp or download a pre-built Windows binary.'
+      : process.platform === 'darwin'
+      ? 'Build demucs from demucs.cpp: mkdir build && cd build && cmake .. && make -j$(sysctl -n hw.ncpu)'
+      : 'Build demucs from demucs.cpp: mkdir build && cd build && cmake .. && make -j$(nproc)';
+    throw new Error(demucsBinName + ' not found at ' + demucsBin + '.\n' + platformHint + '\nThen place the binary in the resources/ folder.');
   }
   if (!fs.existsSync(modelFile)) {
-    throw new Error('Model file not found at ' + modelFile + '. Download ggml-model-htdemucs-6s-f16.bin from HuggingFace.');
+    throw new Error('Model file not found at ' + modelFile + '.\nDownload ggml-model-htdemucs-6s-f16.bin from HuggingFace and place it in the resources/ folder.');
   }
 
   var hash = hashFilePath(filePath);

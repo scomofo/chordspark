@@ -8,8 +8,46 @@ function chordSVG(ch,sz,label,animate){
   var chName=label||ch.name||"chord";
   var w=sz,h=sz*1.3,pL=35,pR=20,pT=30,pB=20,fC=4,sC=6;
   var fH=(h-pT-pB)/fC,sW=(w-pL-pR)/(sC-1);
-  var s='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Chord diagram for '+escHTML(chName)+'">';
-  s+='<rect x="'+pL+'" y="'+pT+'" width="'+(w-pL-pR)+'" height="4" fill="var(--svg-nut)" rx="2"/>';
+
+  // Determine fret offset for higher-position chords
+  // Only offset when fingers exceed the visible 4-fret window
+  var startFret=0;
+  if(ch.fingers&&ch.fingers.length>0){
+    var minFret=99,maxFret=0;
+    for(var fi=0;fi<ch.fingers.length;fi++){
+      if(ch.fingers[fi][1]>0){
+        if(ch.fingers[fi][1]<minFret) minFret=ch.fingers[fi][1];
+        if(ch.fingers[fi][1]>maxFret) maxFret=ch.fingers[fi][1];
+      }
+    }
+    if(ch.barFret){
+      if(ch.barFret<minFret) minFret=ch.barFret;
+      if(ch.barFret>maxFret) maxFret=ch.barFret;
+    }
+    if(maxFret>fC) startFret=minFret-1;
+  }
+
+  // Build accessible description of finger positions
+  var accDesc='Chord diagram for '+escHTML(chName)+'.';
+  if(ch.fingers&&ch.fingers.length>0){
+    accDesc+=' Fingers:';
+    for(var fi=0;fi<ch.fingers.length;fi++){
+      var ff=ch.fingers[fi];
+      accDesc+=' finger '+ff[2]+' on string '+(ff[0]+1)+' fret '+ff[1];
+      if(fi<ch.fingers.length-1)accDesc+=',';
+    }
+    accDesc+='.';
+  }
+  if(ch.barFret)accDesc+=' Barre at fret '+ch.barFret+'.';
+  var s='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+escHTML(accDesc)+'"><title>'+escHTML(accDesc)+'</title>';
+  // Nut (only draw thick nut if at fret 0)
+  if(startFret===0){
+    s+='<rect x="'+pL+'" y="'+pT+'" width="'+(w-pL-pR)+'" height="4" fill="var(--svg-nut)" rx="2"/>';
+  }else{
+    s+='<line x1="'+pL+'" y1="'+pT+'" x2="'+(w-pR)+'" y2="'+pT+'" stroke="var(--svg-fret)" stroke-width="2"/>';
+    // Fret number label
+    s+='<text x="'+(pL-18)+'" y="'+(pT+fH*0.5+5)+'" text-anchor="middle" font-size="13" fill="var(--text-muted)" font-weight="bold">'+(startFret+1)+'</text>';
+  }
   for(var i=0;i<fC;i++)
     s+='<line x1="'+pL+'" y1="'+(pT+fH*(i+1))+'" x2="'+(w-pR)+'" y2="'+(pT+fH*(i+1))+'" stroke="var(--svg-fret)" stroke-width="1.5"/>';
   for(var i=0;i<sC;i++)
@@ -18,21 +56,25 @@ function chordSVG(ch,sz,label,animate){
   for(var i=0;i<m.length;i++)
     s+='<text x="'+(pL+m[i]*sW)+'" y="'+(pT-10)+'" text-anchor="middle" font-size="14" fill="#FF6B6B" font-weight="bold">X</text>';
   var op=ch.open||[];
-  for(var i=0;i<op.length;i++)
-    if(op[i])s+='<circle cx="'+(pL+i*sW)+'" cy="'+(pT-12)+'" r="6" fill="none" stroke="#4ECDC4" stroke-width="2"/>';
-  // Barre chords: bar appears first (1.5s), then fingers stagger after
+  if(startFret===0){
+    for(var i=0;i<op.length;i++)
+      if(op[i])s+='<circle cx="'+(pL+i*sW)+'" cy="'+(pT-12)+'" r="6" fill="none" stroke="#4ECDC4" stroke-width="2"/>';
+  }
+  // Barre chords: bar expands first (0.8s), then fingers stagger after
   // Standard chords: fingers appear with 0.3s stagger, 0.5s duration
   var isBarre=!!ch.barFret;
-  var fDur=isBarre?0.8:0.5;
-  var fStagger=isBarre?0.3:0.3;
-  var fDelay=isBarre?1.2:0;
+  var fDur=isBarre?0.5:0.5;
+  var fStagger=isBarre?0.2:0.3;
+  var fDelay=isBarre?0.6:0;
   if(ch.barFret){
     var bs=ch.barStrings,mn=Math.min.apply(null,bs),mx=Math.max.apply(null,bs);
-    var barAnim=animate?'style="opacity:0;animation:fingerIn 1.5s ease-out 0s forwards"':'';
-    s+='<rect x="'+(pL+mn*sW-10)+'" y="'+(pT+(ch.barFret-0.5)*fH-8)+'" width="'+((mx-mn)*sW+20)+'" height="16" rx="8" fill="#FF6B6B" opacity="0.85" '+barAnim+'/>';
+    var barX=pL+mn*sW-10,barY=pT+(ch.barFret-startFret-0.5)*fH-8,barW=(mx-mn)*sW+20;
+    var barCX=barX+barW/2,barCY=barY+8;
+    var barAnim=animate?'style="opacity:0;transform-origin:'+barCX+'px '+barCY+'px;transform:scaleX(0);animation:barreIn 0.8s ease-out 0s forwards"':'style="opacity:0.85"';
+    s+='<rect x="'+barX+'" y="'+barY+'" width="'+barW+'" height="16" rx="8" fill="#FF6B6B" '+barAnim+'/>';
   }
   for(var i=0;i<ch.fingers.length;i++){
-    var f=ch.fingers[i],cx=pL+f[0]*sW,cy=pT+(f[1]-0.5)*fH,r=Math.min(12,sz/16);
+    var f=ch.fingers[i],cx=pL+f[0]*sW,cy=pT+(f[1]-startFret-0.5)*fH,r=Math.min(12,sz/16);
     var animStyle=animate?'style="opacity:0;animation:fingerIn '+fDur+'s ease-out '+(fDelay+i*fStagger)+'s forwards"':'';
     s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+f[3]+'" stroke="#fff" stroke-width="2" '+animStyle+'/>';
     s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="'+Math.min(11,sz/18)+'" fill="#fff" font-weight="bold" '+animStyle+'>'+f[2]+'</text>';
@@ -63,14 +105,13 @@ function strumHTML(pat,beat){
 
 function checkBadges(){
   var nb=[];
-  function c(id,x){if(x&&S.earnedBadges.indexOf(id)===-1)nb.push(id);}
-  c("first_chord",S.sessions>=1);c("streak_3",S.streak>=3);c("streak_7",S.streak>=7);
-  c("level_2",S.level>=2);c("level_3",S.level>=3);
-  c("ten_sessions",S.sessions>=10);c("drill_5",S.drillCount>=5);
-  c("daily_3",S.dailyDone>=3);c("quiz_10",S.quizCorrect>=10);c("songs_3",S.songsPlayed>=3);
+  for(var i=0;i<BADGES.length;i++){
+    var b=BADGES[i];
+    if(b.check&&b.check()&&S.earnedBadges.indexOf(b.id)===-1)nb.push(b);
+  }
   if(nb.length){
-    for(var i=0;i<nb.length;i++)S.earnedBadges.push(nb[i]);
-    for(var i=0;i<BADGES.length;i++)if(BADGES[i].id===nb[0]){S.newBadge=BADGES[i];break;}
+    for(var i=0;i<nb.length;i++)S.earnedBadges.push(nb[i].id);
+    S.newBadge=nb[0];
     snd("badge");saveState();
     setTimeout(function(){S.newBadge=null;render();},3000);
   }
