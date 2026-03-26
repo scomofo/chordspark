@@ -99,6 +99,12 @@ ipcMain.handle('stems:checkCache', async (event, filePath) => {
 
 // Run demucs separation
 ipcMain.handle('stems:separate', async (event, filePath) => {
+  // Validate filePath exists and is a real file (prevent command injection via crafted paths)
+  var resolvedInput = path.resolve(filePath);
+  if (!fs.existsSync(resolvedInput) || !fs.statSync(resolvedInput).isFile()) {
+    throw new Error('Invalid audio file path');
+  }
+
   var resDir = getResourcePath();
   var demucsBinName = process.platform === 'win32' ? 'demucs.exe' : 'demucs';
   var demucsBin = path.join(resDir, demucsBinName);
@@ -183,10 +189,13 @@ ipcMain.on('stems:cancel', () => {
 
 // Convert file path to file:// URL for audio playback
 ipcMain.handle('stems:getFileUrl', async (event, stemPath) => {
-  // Convert Windows path to file URL
-  var normalized = stemPath.replace(/\\/g, '/');
-  if (!normalized.startsWith('/')) normalized = '/' + normalized;
-  return 'file://' + normalized;
+  // Validate path is within stems directory (prevent path traversal)
+  var normalized = path.resolve(stemPath);
+  var stemsDir = path.resolve(app.getPath('userData'), 'stems');
+  if (!normalized.startsWith(stemsDir)) {
+    throw new Error('Access denied: path outside stems directory');
+  }
+  return 'file://' + normalized.replace(/\\/g, '/');
 });
 
 // ===== APP LIFECYCLE =====

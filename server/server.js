@@ -56,6 +56,22 @@ function validateJSON(str) {
   try { JSON.parse(str); return true; } catch (e) { return false; }
 }
 
+// Search songs (kept for backwards compat, main list already supports ?q=)
+// NOTE: Must be registered BEFORE /api/songs/:id to avoid being captured by :id param
+app.get('/api/songs/search', (req, res) => {
+  if (rateLimit(req, res, 'read', RATE_MAX_READ)) return;
+
+  const { q } = req.query;
+  if (!q) return res.json([]);
+
+  var safeQ = sanitizeString(q, 100);
+  const songs = db.prepare(
+    'SELECT * FROM songs WHERE title LIKE ? OR artist LIKE ? ORDER BY votes DESC LIMIT 20'
+  ).all('%' + safeQ + '%', '%' + safeQ + '%');
+
+  res.json(songs);
+});
+
 // List songs (with optional search and sort)
 app.get('/api/songs', (req, res) => {
   if (rateLimit(req, res, 'read', RATE_MAX_READ)) return;
@@ -151,21 +167,6 @@ app.post('/api/songs/:id/vote', (req, res) => {
   db.prepare('UPDATE songs SET votes = votes + 1 WHERE id = ?').run(songId);
   _voteTracker[voteKey] = true;
   res.json({ votes: song.votes + 1 });
-});
-
-// Search songs (kept for backwards compat, main list already supports ?q=)
-app.get('/api/songs/search', (req, res) => {
-  if (rateLimit(req, res, 'read', RATE_MAX_READ)) return;
-
-  const { q } = req.query;
-  if (!q) return res.json([]);
-
-  var safeQ = sanitizeString(q, 100);
-  const songs = db.prepare(
-    'SELECT * FROM songs WHERE title LIKE ? OR artist LIKE ? ORDER BY votes DESC LIMIT 20'
-  ).all('%' + safeQ + '%', '%' + safeQ + '%');
-
-  res.json(songs);
 });
 
 app.listen(PORT, () => {

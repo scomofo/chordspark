@@ -21,8 +21,9 @@ function tickS(){
     S.timerActive=false;clearTimeout(T.session);
     if(S.metronomeOn)stopMetronome();
     if(S.chordDetectOn)stopChordDetect();
-    S.sessions++;S.streak++;
-    S.lastSessionDate=new Date().toISOString().split("T")[0];
+    var today=new Date().toISOString().slice(0,10);
+    if(S.lastSessionDate!==today){S.streak++;S.lastSessionDate=today;}
+    S.sessions++;
     // Jackpot: 1-in-15 chance of surprise XP bonus (RPE optimisation)
     var jackpot=Math.random()<(1/15);
     var xpEarned=jackpot?50:10;
@@ -75,10 +76,12 @@ function genQ(){
   if(!av.length)av=CHORDS[1];
   var q=av[Math.floor(Math.random()*av.length)];
   var opts=[q];
-  while(opts.length<3){
+  var attempts=0;
+  while(opts.length<3&&attempts<100){
     var r=ALL_CHORDS[Math.floor(Math.random()*ALL_CHORDS.length)];
     var d=false;for(var i=0;i<opts.length;i++)if(opts[i].name===r.name)d=true;
     if(!d)opts.push(r);
+    attempts++;
   }
   opts=shuffle(opts);
   S.quizQ=q;S.quizOpts=opts;S.quizAns=null;render();
@@ -428,9 +431,11 @@ window.act=function(a,v){
     var av=[];for(var _l=1;_l<=S.level;_l++)av=av.concat(CHORDS[_l]||[]);if(!av.length)av=CHORDS[1];
     var q=av[Math.floor(Math.random()*av.length)];
     var opts=[q.name];
-    while(opts.length<4){
+    var attempts=0;
+    while(opts.length<4&&attempts<100){
       var r=ALL_CHORDS[Math.floor(Math.random()*ALL_CHORDS.length)];
       if(opts.indexOf(r.name)===-1)opts.push(r.name);
+      attempts++;
     }
     opts=shuffle(opts);
     S.earTrainQ=q.name;S.earTrainOpts=opts;S.earTrainAns=null;
