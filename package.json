@@ -23,17 +23,19 @@
     "@capacitor/core": "^6.0.0",
     "@tauri-apps/cli": "^2.0.0",
     "electron": "^33.4.11",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "electron-packager": "^17.1.2"
   },
   "build": {
     "appId": "com.chordspark.app",
     "productName": "ChordSpark",
     "mac": {
       "target": [
-        "dmg"
+        "zip"
       ],
       "icon": "icon.png",
-      "category": "public.app-category.music"
+      "category": "public.app-category.music",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "win": {
       "target": [
