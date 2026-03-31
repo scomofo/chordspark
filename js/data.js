@@ -5,7 +5,8 @@ var SCR={
   QUIZ:"quiz",STRUM:"strumDetail",SONG:"songDetail",
   SONG_DONE:"songDone",STEMS:"stems",GUIDED:"guided",GUIDED_DONE:"guidedDone",
   PERFORM:"perform",PERFORM_DONE:"performDone",
-  PERFORM_SONG:"performSong"
+  PERFORM_SONG:"performSong",
+  PERF_STATS:"perfStats"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",
@@ -249,7 +250,11 @@ var STRUM_PATTERNS=[
 
 // ===== SONGS =====
 var SONGS=[
-  {title:"Three Little Birds",artist:"Bob Marley",chords:["A","D","E"],level:3,pattern:["D","D","U","U","D","U"],bpm:75,progression:["A","A","D","A","A","A","E","A"]},
+  {title:"Three Little Birds",artist:"Bob Marley",chords:["A","D","E"],level:3,pattern:["D","D","U","U","D","U"],bpm:75,progression:["A","A","D","A","A","A","E","A"],leadNotes:[
+    {note:"A",t:0,dur:0.5},{note:"A",t:0.5,dur:0.5},{note:"B",t:1,dur:0.5},
+    {note:"C#",t:1.5,dur:0.5},{note:"A",t:2,dur:1},{note:"E",t:3,dur:0.5},
+    {note:"D",t:3.5,dur:0.5},{note:"C#",t:4,dur:0.5},{note:"A",t:4.5,dur:1.5}
+  ]},
   {title:"Horse With No Name",artist:"America",chords:["Em","D"],level:3,pattern:["D","D","U","U","D","U"],bpm:90,progression:["Em","Em","D","D","Em","Em","D","D"]},
   {title:"Knockin on Heavens Door",artist:"Bob Dylan",chords:["G","D","Am","C"],level:4,pattern:["D","D","U","U","D","U"],bpm:68,progression:["G","D","Am","Am","G","D","C","C"]},
   {title:"Wonderful Tonight",artist:"Eric Clapton",chords:["G","D","C","Em"],level:4,pattern:["D","x","D","U","x","U","D","U"],bpm:95,progression:["G","D","C","D","G","D","C","D"]},

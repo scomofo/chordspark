@@ -1141,6 +1141,7 @@ window.act=function(a,v){
     }
     return;
   }
+  if(a==="openPerfStats"){S.screen=SCR.PERF_STATS;render();return;}
   if(a==="openPerformanceDaily"){
     var ch=choosePerformanceDailyChallenge();
     if(!ch){render();return;}
@@ -1303,6 +1304,7 @@ function _renderInner(){
   else if(S.screen===SCR.PERFORM)content=performPage();
   else if(S.screen===SCR.PERFORM_DONE)content=performDonePage();
   else if(S.screen===SCR.PERFORM_SONG)content=performSongPage();
+  else if(S.screen===SCR.PERF_STATS)content=performanceStatsPage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';

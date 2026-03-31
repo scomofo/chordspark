@@ -50,6 +50,7 @@ function performSongPage() {
   h += '<div class="perform-toggle-group" style="justify-content:center">';
   h += '<button class="btn btn-sm' + (arrType === "chords" ? " active" : "") + '" onclick="act(\'performArrangement\',\'chords\')">&#127928; Chords</button>';
   h += '<button class="btn btn-sm' + (arrType === "rhythm_chords" ? " active" : "") + '" onclick="act(\'performArrangement\',\'rhythm_chords\')">&#127925; Rhythm</button>';
+  h += '<button class="btn btn-sm' + (arrType === "lead" ? " active" : "") + '" onclick="act(\'performArrangement\',\'lead\')">&#127925; Lead</button>';
   h += '</div></div>';
 
   // Difficulty selector

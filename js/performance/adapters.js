@@ -10,6 +10,7 @@
       chords: song.chords || [],
       progression: song.progression || [],
       pattern: song.pattern || ["D","D","U","U","D","U"],
+      leadNotes: song.leadNotes || null,
       source: "builtin"
     };
   }
@@ -43,6 +44,9 @@
     if (arrangementType === "rhythm_chords") {
       arrangement = buildRhythmChordArrangement(perfSong);
       phrases = buildPhraseMarkersFromBars(perfSong, 4);
+    } else if (arrangementType === "lead" && perfSong.leadNotes) {
+      arrangement = buildLeadArrangement(perfSong, perfSong.leadNotes);
+      phrases = arrangement ? buildPhraseMarkers(arrangement) : [];
     } else {
       arrangement = buildChordArrangement(perfSong);
       phrases = buildPhraseMarkers(arrangement);

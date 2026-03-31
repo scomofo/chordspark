@@ -377,5 +377,6 @@ function performSubTab(){
   h+='<p style="font-size:11px;color:var(--text-muted)">More charts coming soon! MIDI input: '+
     (S.midiEnabled?'<span style="color:#4ECDC4;font-weight:700">Connected</span>':'<span style="color:#FF6B6B">Off &mdash; enable in Tools</span>')+'</p>';
   h+='</div>';
+  h+='<div style="text-align:center;margin-top:12px"><button class="btn btn-sm" onclick="act(\'openPerfStats\')" style="background:var(--input-bg);color:var(--text-secondary)">&#128202; View Stats</button></div>';
   return h;
 }

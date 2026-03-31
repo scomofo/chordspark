@@ -133,10 +133,41 @@
     return phrases;
   }
 
+  function buildLeadArrangement(perfSong, noteSequence) {
+    if (!noteSequence || !noteSequence.length) return null;
+
+    var bpm = perfSong.bpm || 100;
+    var beatDur = 60 / bpm;
+    var events = [];
+
+    for (var i = 0; i < noteSequence.length; i++) {
+      var n = noteSequence[i];
+      events.push({
+        id: i + 1,
+        t: typeof n.t === "number" ? n.t : i * beatDur * 0.5,
+        dur: typeof n.dur === "number" ? n.dur : beatDur * 0.5,
+        type: "note",
+        note: n.note || n,
+        midiNote: n.midi || null,
+        laneLabel: typeof n === "string" ? n : (n.note || "?"),
+        notes: [typeof n === "string" ? n : (n.note || "")],
+        strum: null
+      });
+    }
+
+    return {
+      id: (perfSong.id || "lead") + "_lead",
+      mode: "lead",
+      bpm: bpm,
+      events: events
+    };
+  }
+
   window.buildChordArrangement = buildChordArrangement;
   window.buildPhraseMarkers = buildPhraseMarkers;
   window.buildRhythmChordArrangement = buildRhythmChordArrangement;
   window.buildPhraseMarkersFromBars = buildPhraseMarkersFromBars;
   window.expandStrumPattern = expandStrumPattern;
+  window.buildLeadArrangement = buildLeadArrangement;
 
 })();

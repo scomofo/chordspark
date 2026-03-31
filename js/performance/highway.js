@@ -21,6 +21,7 @@ function renderPerformanceEvent(evt, nowSec, scrollSpeed, lookaheadSec) {
   } else if (evt._miss) {
     cls += " miss";
   }
+  if (evt.type === "note") cls += " perform-event-note";
 
   var gradeLabel = "";
   if (evt._result) {

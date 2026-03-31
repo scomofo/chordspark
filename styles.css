@@ -422,6 +422,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .perform-event.perfect { background:linear-gradient(135deg, #FFE66D, #FF8A5C); border-color:#FFE66D; opacity:.7; }
 .perform-event.good { background:linear-gradient(135deg, #4ECDC4, #96CEB4); border-color:#4ECDC4; opacity:.7; }
 .perform-event.ok { background:linear-gradient(135deg, #45B7D1, #4ECDC4); border-color:#45B7D1; opacity:.7; }
+.perform-event-note { left:25%; right:25%; min-height:6px; border-radius:12px; }
 
 .perform-event-label { font-size:14px; font-weight:800; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.3); }
 
