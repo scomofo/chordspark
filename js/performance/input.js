@@ -61,7 +61,8 @@ var PerformanceInput = {
         mode: "midi",
         pitchClasses: this.latestPitchClasses.slice(),
         heldMidiNotes: Object.keys(this.heldMidiNotes).map(Number),
-        recentAttacks: this.recentMidiNoteOns.slice()
+        recentAttacks: this.recentMidiNoteOns.slice(),
+        attackClusters: this.getRecentAttackClusters(nowSec)
       };
     }
     return {
@@ -79,6 +80,34 @@ var PerformanceInput = {
   getRecentAttacks: function(nowSec, windowMs) {
     var cutoff = nowSec - (windowMs / 1000);
     return this.recentMidiNoteOns.filter(function(a) { return a.tSec >= cutoff; });
+  },
+
+  getRecentAttackClusters: function(nowSec, windowMs, clusterMs) {
+    windowMs = windowMs || ((typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.recentAttackWindowMs : 220);
+    clusterMs = clusterMs || ((typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.attackClusterMs : 40);
+    var cutoff = nowSec - (windowMs / 1000);
+    var recent = [];
+    for (var i = 0; i < this.recentMidiNoteOns.length; i++) {
+      if (this.recentMidiNoteOns[i].tSec >= cutoff) recent.push(this.recentMidiNoteOns[i]);
+    }
+    if (recent.length === 0) return [];
+
+    // Group into clusters by time proximity
+    var clusters = [];
+    var current = { tSec: recent[0].tSec, notes: [recent[0].note], pitchClasses: [] };
+    for (var j = 1; j < recent.length; j++) {
+      var gap = (recent[j].tSec - current.tSec) * 1000;
+      if (gap <= clusterMs) {
+        current.notes.push(recent[j].note);
+      } else {
+        current.pitchClasses = _clusterPitchClasses(current.notes);
+        clusters.push(current);
+        current = { tSec: recent[j].tSec, notes: [recent[j].note], pitchClasses: [] };
+      }
+    }
+    current.pitchClasses = _clusterPitchClasses(current.notes);
+    clusters.push(current);
+    return clusters;
   },
 
   _updatePitchClasses: function() {
@@ -99,4 +128,12 @@ function _dedupePitchClasses(arr) {
     if (!seen[n]) { seen[n] = true; result.push(n); }
   }
   return result;
+}
+
+function _clusterPitchClasses(noteNums) {
+  var names = [];
+  for (var i = 0; i < noteNums.length; i++) {
+    names.push(NOTE_NAMES[noteNums[i] % 12]);
+  }
+  return _dedupePitchClasses(names);
 }

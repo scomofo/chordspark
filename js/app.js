@@ -1132,6 +1132,7 @@ window.act=function(a,v){
   if(a==="performClearLoop"){clearPerformanceLoop();return;}
   if(a==="performPracticePreset"){applyPerformanceStemPreset(v);render();return;}
   if(a==="performRetry"){startPerformance(S.performChartId);return;}
+  if(a==="performDebug"){S.performDebug=!S.performDebug;render();return;}
   // === Back ===
   if(a==="back"){
     stopAllTimers();
@@ -1288,6 +1289,19 @@ document.addEventListener("keydown",function(e){
       return;
     }
     return;
+  }
+
+  // Perform mode shortcuts
+  if(S.screen===SCR.PERFORM||S.screen===SCR.PERFORM_DONE){
+    if(key==="l"||key==="L"){act("performLoopPhrase");return;}
+    if(key==="c"||key==="C"){act("performClearLoop");return;}
+    if(key==="1"){act("performSpeed",0.5);return;}
+    if(key==="2"){act("performSpeed",0.75);return;}
+    if(key==="3"){act("performSpeed",1);return;}
+    if(key==="m"||key==="M"){act("performMode","midi");return;}
+    if(key==="n"||key==="N"){act("performMode","mic");return;}
+    if(key==="Escape"){act("stopPerform");return;}
+    if(key==="d"||key==="D"){act("performDebug");return;}
   }
 
   // M - toggle metronome

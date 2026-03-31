@@ -1,14 +1,34 @@
 /* ===== ChordSpark Performance: Scoring Engine ===== */
 
+function _getClosestCluster(eventTimeSec, clusters) {
+  if (!clusters || clusters.length === 0) return null;
+  var best = null;
+  var bestDist = Infinity;
+  for (var i = 0; i < clusters.length; i++) {
+    var dist = Math.abs(clusters[i].tSec - eventTimeSec);
+    if (dist < bestDist) { bestDist = dist; best = clusters[i]; }
+  }
+  return best;
+}
+
 function scorePerformanceEvent(event, snapshot, hitDeltaMs, difficulty, mode) {
   var targetNotes = event.notes || [];
   var inputNotes = snapshot.pitchClasses || [];
 
   if (targetNotes.length === 0) return { score: 0, grade: "miss", noteScore: 0, timingScore: 0 };
 
+  // For MIDI mode, prefer closest attack cluster for note matching
+  var matchNotes = inputNotes;
+  if (mode === "midi" && snapshot.attackClusters && snapshot.attackClusters.length > 0) {
+    var cluster = _getClosestCluster(event.t, snapshot.attackClusters);
+    if (cluster && cluster.pitchClasses.length > 0) {
+      matchNotes = cluster.pitchClasses;
+    }
+  }
+
   var overlap = 0;
   for (var i = 0; i < targetNotes.length; i++) {
-    if (inputNotes.indexOf(targetNotes[i]) >= 0) overlap++;
+    if (matchNotes.indexOf(targetNotes[i]) >= 0) overlap++;
   }
   var noteScore = overlap / targetNotes.length;
 

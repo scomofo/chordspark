@@ -3,6 +3,33 @@
 var _performRAF = null;
 var _performStopping = false;
 
+function startPerformanceCountIn(chart, speed, onDone) {
+  var bpm = chart.bpm || 90;
+  var beatMs = (60000 / bpm) / (speed || 1);
+  var beats = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.countInBeats : 4;
+  S.performCountdownActive = true;
+  S.performCountdownBeats = beats;
+  render();
+
+  function tick() {
+    S.performCountdownBeats--;
+    // Play metronome click if sound is on
+    if (S.soundOn && typeof metroClick === "function") {
+      metroClick(S.performCountdownBeats === 0);
+    }
+    if (S.performCountdownBeats <= 0) {
+      S.performCountdownActive = false;
+      render();
+      onDone();
+    } else {
+      render();
+      setTimeout(tick, beatMs);
+    }
+  }
+
+  setTimeout(tick, beatMs);
+}
+
 function startPerformance(chartId, opts) {
   opts = opts || {};
   _performStopping = false;
@@ -44,12 +71,20 @@ function startPerformance(chartId, opts) {
 
     PerformanceInput.start(S.performMode);
     applyPerformanceStemPreset(S.performPracticePreset);
-    PerformanceTransport.start(0, S.performSpeed);
 
     S.screen = SCR.PERFORM;
-    render();
 
-    _performRAF = requestAnimationFrame(updatePerformanceFrame);
+    if (S.performCountIn) {
+      startPerformanceCountIn(chart, S.performSpeed, function() {
+        PerformanceTransport.start(0, S.performSpeed);
+        render();
+        _performRAF = requestAnimationFrame(updatePerformanceFrame);
+      });
+    } else {
+      PerformanceTransport.start(0, S.performSpeed);
+      render();
+      _performRAF = requestAnimationFrame(updatePerformanceFrame);
+    }
   }).catch(function(err) {
     console.error("ChordSpark: Failed to start performance:", err);
     S.screen = SCR.HOME;

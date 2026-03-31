@@ -16,8 +16,11 @@ function renderPerformanceEvent(evt, nowSec, scrollSpeed, lookaheadSec) {
   if (y < -60 || endY > HIGHWAY_HEIGHT + 60) return "";
 
   var cls = "perform-event";
-  if (evt._hit) cls += " hit";
-  else if (evt._miss) cls += " miss";
+  if (evt._hit && evt._result) {
+    cls += " hit " + evt._result.grade;
+  } else if (evt._miss) {
+    cls += " miss";
+  }
 
   var gradeLabel = "";
   if (evt._result) {

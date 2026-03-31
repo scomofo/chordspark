@@ -32,6 +32,13 @@ function performPage() {
     h += '<div class="perform-hit-feedback">' + escHTML(S.performLastHitLabel) + '</div>';
   }
 
+  // Count-in overlay
+  if (S.performCountdownActive && S.performCountdownBeats > 0) {
+    h += '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:20;background:rgba(0,0,0,.6);pointer-events:none">';
+    h += '<div style="font-size:72px;font-weight:900;color:#FFE66D;text-shadow:0 4px 20px rgba(0,0,0,.5);animation:bn .3s ease">' + S.performCountdownBeats + '</div>';
+    h += '</div>';
+  }
+
   // Highway
   h += renderPerformanceHighway(chart, nowSec);
 
@@ -44,6 +51,30 @@ function performPage() {
     }
   }
   h += '</div>';
+
+  // Debug overlay
+  if (S.performDebug) {
+    var debugPhrase = getPerformancePhraseForTime(chart, nowSec);
+    h += '<div style="background:rgba(0,0,0,.85);color:#0f0;font-family:monospace;font-size:11px;padding:8px;border-radius:6px;margin:4px 12px">';
+    h += 'time: ' + nowSec.toFixed(2) + 's | phrase: ' + (debugPhrase ? debugPhrase.name : '-') + '<br>';
+    h += 'speed: ' + S.performSpeed + ' | diff: ' + S.performDifficulty + '<br>';
+    h += 'combo: ' + S.performCombo + '/' + S.performMaxCombo + ' | score: ' + S.performScore + '<br>';
+    h += 'notes: [' + (S.performInputNotes || []).join(',') + ']<br>';
+    h += 'loop: ' + (S.performLoop ? S.performLoop.startSec.toFixed(1) + '-' + S.performLoop.endSec.toFixed(1) : 'off') + '<br>';
+    h += 'windows: P' + S.performWindowPerfectMs + '/G' + S.performWindowGoodMs + '/M' + S.performWindowMissMs;
+    h += '</div>';
+  }
+
+  // Loop practice banner
+  if (S.performLoop) {
+    var loopPhrase = null;
+    if (chart && chart.phrases) {
+      for (var li = 0; li < chart.phrases.length; li++) {
+        if (chart.phrases[li].id === S.performLoop.phraseId) { loopPhrase = chart.phrases[li]; break; }
+      }
+    }
+    h += '<div style="text-align:center;padding:4px 12px;background:#FFE66D22;border-radius:8px;margin:4px 12px"><span style="font-size:11px;font-weight:700;color:#FFE66D">&#128257; Looping: ' + escHTML(loopPhrase ? loopPhrase.name : 'Phrase') + '</span></div>';
+  }
 
   // Controls
   h += '<div class="perform-controls">';
@@ -118,6 +149,9 @@ function performDonePage() {
   }
   h += '</div>';
 
+  // Summary stats
+  h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">' + (r.totalEvents || 0) + ' events &mdash; ' + ((r.totalEvents || 0) - (r.accuracy ? Math.round(r.accuracy * (r.totalEvents || 0) / 100) : 0)) + ' missed</div>';
+
   // Stats cards
   h += '<div class="card mb20"><div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap">';
   h += '<div><div style="font-size:28px;font-weight:900;color:#FFE66D">' + r.score + '</div><div style="font-size:11px;color:var(--text-muted)">Score</div></div>';
@@ -136,6 +170,22 @@ function performDonePage() {
       h += '<span style="font-size:12px;color:var(--text-muted)">' + ps.perfects + 'P / ' + ps.goods + 'G / ' + ps.oks + 'O / ' + ps.misses + 'M &mdash; ' + pct + '%</span>';
       h += '</div>';
     }
+    h += '</div>';
+  }
+
+  // Best and weakest phrases
+  if (r.phraseStats && r.phraseStats.length > 1) {
+    var bestIdx = 0, worstIdx = 0;
+    for (var bi = 1; bi < r.phraseStats.length; bi++) {
+      var bAvg = r.phraseStats[bi].total > 0 ? r.phraseStats[bi].scoreSum / r.phraseStats[bi].total : 0;
+      var bestAvg = r.phraseStats[bestIdx].total > 0 ? r.phraseStats[bestIdx].scoreSum / r.phraseStats[bestIdx].total : 0;
+      var worstAvg = r.phraseStats[worstIdx].total > 0 ? r.phraseStats[worstIdx].scoreSum / r.phraseStats[worstIdx].total : 0;
+      if (bAvg > bestAvg) bestIdx = bi;
+      if (bAvg < worstAvg) worstIdx = bi;
+    }
+    h += '<div style="display:flex;gap:10px;margin-bottom:16px">';
+    h += '<div class="card" style="flex:1;text-align:center;border:2px solid #4ECDC4;padding:10px"><div style="font-size:11px;color:var(--text-muted)">Best Phrase</div><div style="font-size:14px;font-weight:800;color:#4ECDC4">' + escHTML(r.phraseStats[bestIdx].name) + '</div></div>';
+    h += '<div class="card" style="flex:1;text-align:center;border:2px solid #FF6B6B;padding:10px"><div style="font-size:11px;color:var(--text-muted)">Weakest Phrase</div><div style="font-size:14px;font-weight:800;color:#FF6B6B">' + escHTML(r.phraseStats[worstIdx].name) + '</div></div>';
     h += '</div>';
   }
 
