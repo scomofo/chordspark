@@ -40,6 +40,11 @@ function practiceTab(){
   }
   h+='</div></div></div>';
 
+  // Practice Plan CTA
+  h+='<div class="card mb12" style="text-align:center">';
+  h+='<button class="btn" onclick="act(\'openPlan\')" style="background:var(--accent);color:#fff;font-weight:700">&#128218; Today\'s Practice Plan</button>';
+  h+='</div>';
+
   // Guided Session CTA
   var gs=GUITAR_SESSIONS[S.guidedSession-1];
   if(gs){

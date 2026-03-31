@@ -138,6 +138,13 @@ var S={
   // Skill tree
   skillTreeFocus:"overview",
   skillTreeSelectedNode:null,
+
+  // Practice plan
+  practicePlan:null,
+  practicePlanDate:null,
+  practicePlanComplete:false,
+  practicePlanHistory:[],
+  practicePlanFocus:"",
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -159,7 +166,8 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "performMidiOffsetMs","performAudioOffsetMs","performCalibrated",
   "performanceDailyHistory",
   "practicePlanDate","practicePlanHistory",
-  "performEditorLibrary"];
+  "performEditorLibrary",
+  "practicePlan","practicePlanDate","practicePlanHistory"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;
