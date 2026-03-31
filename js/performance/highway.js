@@ -1,7 +1,7 @@
 /* ===== ChordSpark Performance: Highway Renderer ===== */
 
 var HIGHWAY_HEIGHT = 400;
-var HITLINE_Y = 340;
+var HITLINE_Y = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.highway.hitLineTopPx : 340;
 
 function performanceEventY(evtTime, nowSec, scrollSpeed) {
   var deltaSec = evtTime - nowSec;

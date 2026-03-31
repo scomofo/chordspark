@@ -28,7 +28,7 @@ function performPage() {
   h += '</div>';
 
   // Hit feedback
-  if (S.performLastHitLabel && Date.now() - S.performLastHitTime < 800) {
+  if (S.performLastHitLabel && Date.now() - S.performLastHitTime < ((typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.ui.hitBadgeMs : 800)) {
     h += '<div class="perform-hit-feedback">' + escHTML(S.performLastHitLabel) + '</div>';
   }
 

@@ -12,17 +12,21 @@ function scorePerformanceEvent(event, snapshot, hitDeltaMs, difficulty, mode) {
   }
   var noteScore = overlap / targetNotes.length;
 
+  var diff = typeof getPerformanceDifficulty === "function" ? getPerformanceDifficulty(difficulty) : null;
+  var perfectMs = diff ? diff.perfectMs : S.performWindowPerfectMs;
+  var goodMs = diff ? diff.goodMs : S.performWindowGoodMs;
+  var missMs = diff ? diff.missMs : S.performWindowMissMs;
+  var nw = diff ? diff.noteWeight : 0.75;
+  var tw = diff ? diff.timingWeight : 0.25;
+
   var absDelta = Math.abs(hitDeltaMs);
   var timingScore = 0;
-  if (absDelta <= S.performWindowPerfectMs) timingScore = 1.0;
-  else if (absDelta <= S.performWindowGoodMs) timingScore = 0.7;
-  else if (absDelta <= S.performWindowMissMs) timingScore = 0.3;
+  if (absDelta <= perfectMs) timingScore = 1.0;
+  else if (absDelta <= goodMs) timingScore = 0.7;
+  else if (absDelta <= missMs) timingScore = 0.3;
   else timingScore = 0;
 
-  var total;
-  if (difficulty === "easy") total = noteScore * 0.85 + timingScore * 0.15;
-  else if (difficulty === "pro") total = noteScore * 0.65 + timingScore * 0.35;
-  else total = noteScore * 0.75 + timingScore * 0.25;
+  var total = noteScore * nw + timingScore * tw;
 
   return {
     score: Math.round(total * 100) / 100,

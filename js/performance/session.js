@@ -34,6 +34,14 @@ function startPerformance(chartId, opts) {
 
     S.performInputSource = S.performMode;
 
+    // Apply difficulty profile to state windows
+    applyPerformanceDifficultyToState(S.performDifficulty);
+    // Apply config-driven runtime values
+    if (typeof PERFORMANCE_CONFIG !== "undefined") {
+      S.performScrollSpeed = PERFORMANCE_CONFIG.highway.scrollSpeed;
+      S.performHighwayLookaheadSec = PERFORMANCE_CONFIG.highway.lookaheadSec;
+    }
+
     PerformanceInput.start(S.performMode);
     applyPerformanceStemPreset(S.performPracticePreset);
     PerformanceTransport.start(0, S.performSpeed);

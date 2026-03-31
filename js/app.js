@@ -1120,7 +1120,7 @@ window.act=function(a,v){
   if(a==="resumePerform"){resumePerformance();return;}
   if(a==="stopPerform"){stopPerformance();S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
   if(a==="performMode"){S.performMode=v;S.performInputSource=v;PerformanceInput.start(v);saveState();render();return;}
-  if(a==="performDifficulty"){S.performDifficulty=v;saveState();render();return;}
+  if(a==="performDifficulty"){applyPerformanceDifficultyToState(v||"normal");saveState();render();return;}
   if(a==="performSpeed"){
     S.performSpeed=parseFloat(v);PerformanceTransport.setSpeed(S.performSpeed);saveState();render();return;
   }
