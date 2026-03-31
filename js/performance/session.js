@@ -324,6 +324,27 @@ function finishPerformance() {
     }
   }
 
+  // Update progression stats
+  if (typeof updatePerformanceStats === "function") {
+    var arrType = (S.performChart && S.performChart.arrangementType) || "chords";
+    var progStats = updatePerformanceStats(
+      S.performChartId || "unknown",
+      arrType,
+      S.performDifficulty,
+      S.performResults
+    );
+    // Check for unlocks
+    var unlocks = checkPerformanceUnlocks(
+      S.performChartId || "unknown",
+      arrType,
+      S.performDifficulty,
+      progStats
+    );
+    if (unlocks.length > 0) {
+      S.performResults.unlocks = unlocks;
+    }
+  }
+
   saveState();
   S.screen = SCR.PERFORM_DONE;
   render();

@@ -10,7 +10,9 @@
       timingWeight: 0.15,
       partialCreditFloor: 0.25,
       requireAttackCluster: false,
-      showHints: true
+      showHints: true,
+      checkStrumDirection: false,
+      directionWeight: 0.0
     },
     normal: {
       id: "normal",
@@ -22,7 +24,9 @@
       timingWeight: 0.25,
       partialCreditFloor: 0.35,
       requireAttackCluster: true,
-      showHints: true
+      showHints: true,
+      checkStrumDirection: true,
+      directionWeight: 0.15
     },
     pro: {
       id: "pro",
@@ -34,7 +38,9 @@
       timingWeight: 0.35,
       partialCreditFloor: 0.45,
       requireAttackCluster: true,
-      showHints: false
+      showHints: false,
+      checkStrumDirection: true,
+      directionWeight: 0.25
     }
   };
 

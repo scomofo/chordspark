@@ -1124,6 +1124,14 @@ window.act=function(a,v){
     }
     return;
   }
+  if(a==="performSongRhythm"){
+    var songIdx=parseInt(v);
+    if(!isNaN(songIdx)&&SONGS[songIdx]){
+      var chart=buildPerformanceChartFromSong(SONGS[songIdx],"builtin","rhythm_chords");
+      if(chart){S.performArrangementType="rhythm_chords";startPerformance(chart);return;}
+    }
+    return;
+  }
   if(a==="pausePerform"){pausePerformance();return;}
   if(a==="resumePerform"){resumePerformance();return;}
   if(a==="stopPerform"){stopPerformance();S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}

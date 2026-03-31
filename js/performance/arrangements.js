@@ -60,7 +60,83 @@
     return phrases;
   }
 
+  function expandStrumPattern(pattern, barDur, chordName, chordNotes, startSec, phraseId) {
+    if (!pattern || !pattern.length) return [];
+    var slotDur = barDur / pattern.length;
+    var events = [];
+    for (var i = 0; i < pattern.length; i++) {
+      var dir = pattern[i];
+      if (dir === "x" || dir === "X") continue; // skip rests
+      events.push({
+        t: startSec + i * slotDur,
+        dur: slotDur * 0.8,
+        type: "strum",
+        chord: chordName,
+        laneLabel: (dir === "U" ? "\u2191 " : "\u2193 ") + chordName,
+        notes: chordNotes || [],
+        strum: dir,
+        rhythm: { dir: dir, slot: i, patternName: "song_pattern" }
+      });
+    }
+    return events;
+  }
+
+  function buildRhythmChordArrangement(perfSong) {
+    if (!perfSong || !perfSong.progression || !perfSong.progression.length) return null;
+
+    var bpm = perfSong.bpm || 100;
+    var barDur = (60 / bpm) * 4;
+    var pattern = perfSong.pattern || ["D","D","U","U","D","U"];
+    var events = [];
+    var evtId = 1;
+
+    for (var i = 0; i < perfSong.progression.length; i++) {
+      var chord = perfSong.progression[i];
+      var notes = [];
+      if (typeof CHORD_NOTES !== "undefined" && CHORD_NOTES[chord]) {
+        notes = CHORD_NOTES[chord].slice();
+      }
+      var barStart = i * barDur;
+      var strums = expandStrumPattern(pattern, barDur, chord, notes, barStart, 0);
+      for (var j = 0; j < strums.length; j++) {
+        strums[j].id = evtId++;
+        events.push(strums[j]);
+      }
+    }
+
+    return {
+      id: perfSong.id + "_rhythm",
+      mode: "rhythm_chords",
+      bpm: bpm,
+      events: events
+    };
+  }
+
+  function buildPhraseMarkersFromBars(perfSong, barsPerPhrase) {
+    barsPerPhrase = barsPerPhrase || 4;
+    var bpm = perfSong.bpm || 100;
+    var barDur = (60 / bpm) * 4;
+    var totalBars = perfSong.progression ? perfSong.progression.length : 0;
+    var phrases = [];
+    var phraseId = 0;
+
+    for (var bar = 0; bar < totalBars; bar += barsPerPhrase) {
+      var endBar = Math.min(bar + barsPerPhrase, totalBars);
+      phrases.push({
+        id: phraseId,
+        name: "Phrase " + (phraseId + 1),
+        startSec: bar * barDur,
+        endSec: endBar * barDur
+      });
+      phraseId++;
+    }
+    return phrases;
+  }
+
   window.buildChordArrangement = buildChordArrangement;
   window.buildPhraseMarkers = buildPhraseMarkers;
+  window.buildRhythmChordArrangement = buildRhythmChordArrangement;
+  window.buildPhraseMarkersFromBars = buildPhraseMarkersFromBars;
+  window.expandStrumPattern = expandStrumPattern;
 
 })();

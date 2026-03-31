@@ -28,7 +28,7 @@
     };
   }
 
-  function buildPerformanceChartFromSong(song, sourceType) {
+  function buildPerformanceChartFromSong(song, sourceType, arrangementType) {
     var perfSong;
     if (sourceType === "imported") {
       perfSong = buildPerformanceSongFromImported(song);
@@ -37,16 +37,27 @@
     }
     if (!perfSong || !perfSong.progression.length) return null;
 
-    var arrangement = buildChordArrangement(perfSong);
-    var phrases = buildPhraseMarkers(arrangement);
+    arrangementType = arrangementType || "chords";
+    var arrangement, phrases;
+
+    if (arrangementType === "rhythm_chords") {
+      arrangement = buildRhythmChordArrangement(perfSong);
+      phrases = buildPhraseMarkersFromBars(perfSong, 4);
+    } else {
+      arrangement = buildChordArrangement(perfSong);
+      phrases = buildPhraseMarkers(arrangement);
+    }
+
+    if (!arrangement) return null;
 
     return {
-      id: perfSong.id + "_perf",
+      id: perfSong.id + "_" + arrangementType,
       title: perfSong.title,
       artist: perfSong.artist,
       bpm: perfSong.bpm,
       beatsPerBar: 4,
       offsetSec: 0,
+      arrangementType: arrangementType,
       audio: { type: "silent" },
       events: arrangement.events,
       phrases: phrases

@@ -87,13 +87,21 @@ function songsTab(){
   for(var i=0;i<filtered.length;i++){
     var s=filtered[i],lk=s.level>S.level;
     h+='<div class="card" style="opacity:'+(lk?0.4:1)+';cursor:'+(lk?"default":"pointer")+'"'+(lk?'':clickableDiv("act(\'openSong\',"+i+")"))+'">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text-primary)">'+escHTML(s.title)+'</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text-muted)">'+escHTML(s.artist)+'</p></div><div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+LC[s.level]+'">Lvl '+s.level+'</div><div style="font-size:11px;color:var(--text-muted)">'+s.bpm+' BPM &bull; '+s.chords.length+' chords</div></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text-primary)">'+escHTML(s.title)+'</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text-muted)">'+escHTML(s.artist)+'</p></div><div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+LC[s.level]+'">Lvl '+s.level+'</div><div style="font-size:11px;color:var(--text-muted)">'+s.bpm+' BPM &bull; '+s.chords.length+' chords</div>';
+    if(typeof getPerformanceStats==="function"){
+      var _ps=getPerformanceStats(s.title.toLowerCase().replace(/[^a-z0-9]+/g,"_")+"_perf","chords",S.performDifficulty);
+      if(_ps.mastery!=="none"){
+        h+='<div style="font-size:11px;font-weight:700;color:'+getMasteryColor(_ps.mastery)+'">'+getMasteryIcon(_ps.mastery)+' '+_ps.mastery+'</div>';
+      }
+    }
+    h+='</div></div>';
     h+='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">';
     for(var j=0;j<s.chords.length;j++)
       h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+escHTML(s.chords[j])+'</span>';
     h+='</div>';
     if(s.progression&&s.progression.length>0&&!lk){
-      h+='<div style="margin-top:6px"><button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSong\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:11px;padding:4px 10px">&#127918; Perform</button></div>';
+      h+='<div style="margin-top:6px"><button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSong\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:11px;padding:4px 10px">&#127918; Perform</button>';
+      h+='<button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSongRhythm\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#45B7D1,#4ECDC4);color:#fff;font-size:11px;padding:4px 10px;margin-left:4px">&#127925; Rhythm</button></div>';
     }
     h+='</div>';
   }

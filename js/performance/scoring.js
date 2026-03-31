@@ -11,6 +11,12 @@ function _getClosestCluster(eventTimeSec, clusters) {
   return best;
 }
 
+function scoreStrumDirection(expectedDir, actualDir, diff) {
+  if (!diff || !diff.checkStrumDirection) return 1;
+  if (!actualDir) return diff.id === "pro" ? 0 : 0.5;
+  return expectedDir === actualDir ? 1 : 0;
+}
+
 function scorePerformanceEvent(event, snapshot, hitDeltaMs, difficulty, mode) {
   var targetNotes = event.notes || [];
   var inputNotes = snapshot.pitchClasses || [];
@@ -46,7 +52,16 @@ function scorePerformanceEvent(event, snapshot, hitDeltaMs, difficulty, mode) {
   else if (absDelta <= missMs) timingScore = 0.3;
   else timingScore = 0;
 
-  var total = noteScore * nw + timingScore * tw;
+  var total;
+  if (event.type === "strum" && event.rhythm && diff) {
+    var dirScore = scoreStrumDirection(event.rhythm.dir, snapshot.strumDir || null, diff);
+    var dw = diff.directionWeight || 0;
+    // Renormalize weights: note + timing + direction should sum to ~1
+    var sumW = nw + tw + dw;
+    total = (noteScore * nw + timingScore * tw + dirScore * dw) / (sumW || 1);
+  } else {
+    total = noteScore * nw + timingScore * tw;
+  }
 
   return {
     score: Math.round(total * 100) / 100,

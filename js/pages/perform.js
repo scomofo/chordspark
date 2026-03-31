@@ -159,6 +159,22 @@ function performDonePage() {
   // Summary stats
   h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">' + (r.totalEvents || 0) + ' events &mdash; ' + ((r.totalEvents || 0) - (r.accuracy ? Math.round(r.accuracy * (r.totalEvents || 0) / 100) : 0)) + ' missed</div>';
 
+  // Mastery badge
+  if (typeof getPerformanceStats === "function") {
+    var arrType = (S.performChart && S.performChart.arrangementType) || "chords";
+    var pStats = getPerformanceStats(S.performChartId || "unknown", arrType, S.performDifficulty);
+    if (pStats.mastery !== "none") {
+      h += '<div style="margin-bottom:12px"><span style="background:' + getMasteryColor(pStats.mastery) + '22;color:' + getMasteryColor(pStats.mastery) + ';padding:6px 16px;border-radius:12px;font-size:13px;font-weight:800">' + getMasteryIcon(pStats.mastery) + ' ' + pStats.mastery.charAt(0).toUpperCase() + pStats.mastery.slice(1) + '</span></div>';
+    }
+  }
+
+  // Unlock celebrations
+  if (r.unlocks && r.unlocks.length > 0) {
+    for (var ui = 0; ui < r.unlocks.length; ui++) {
+      h += '<div style="background:linear-gradient(135deg,#FFE66D22,#FF8A5C22);border:1px solid #FFE66D44;border-radius:12px;padding:8px 16px;margin-bottom:8px;text-align:center"><span style="font-weight:800;color:#FFE66D">' + escHTML(r.unlocks[ui].label) + '</span> <span style="font-size:12px;color:var(--text-muted)">+' + r.unlocks[ui].xp + ' XP</span></div>';
+    }
+  }
+
   // Stats cards
   h += '<div class="card mb20"><div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap">';
   h += '<div><div style="font-size:28px;font-weight:900;color:#FFE66D">' + r.score + '</div><div style="font-size:11px;color:var(--text-muted)">Score</div></div>';

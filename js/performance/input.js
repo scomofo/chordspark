@@ -101,11 +101,13 @@ var PerformanceInput = {
         current.notes.push(recent[j].note);
       } else {
         current.pitchClasses = _clusterPitchClasses(current.notes);
+        current.strumDir = inferStrumDirectionFromCluster(current);
         clusters.push(current);
         current = { tSec: recent[j].tSec, notes: [recent[j].note], pitchClasses: [] };
       }
     }
     current.pitchClasses = _clusterPitchClasses(current.notes);
+    current.strumDir = inferStrumDirectionFromCluster(current);
     clusters.push(current);
     return clusters;
   },
@@ -136,4 +138,10 @@ function _clusterPitchClasses(noteNums) {
     names.push(NOTE_NAMES[noteNums[i] % 12]);
   }
   return _dedupePitchClasses(names);
+}
+
+function inferStrumDirectionFromCluster(cluster) {
+  if (!cluster || !cluster.notes || cluster.notes.length < 2) return null;
+  // Future: analyze note onset order for direction inference
+  return null;
 }
