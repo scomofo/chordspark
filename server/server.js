@@ -5,7 +5,7 @@ const db = require('./db');
 const app = express();
 const PORT = 3456;
 
-app.use(cors());
+app.use(cors({ origin: ['http://localhost:3456', 'app://localhost', 'file://'] }));
 app.use(express.json({ limit: '100kb' }));
 
 // ===== RATE LIMITING =====

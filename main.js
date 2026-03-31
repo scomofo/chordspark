@@ -50,7 +50,7 @@ function createWindow() {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' file:; connect-src 'self' https://localhost:3456"]
+        'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' file:; connect-src 'self' http://localhost:3456"]
       }
     });
   });
@@ -130,7 +130,7 @@ ipcMain.handle('stems:separate', async (event, filePath) => {
   return new Promise((resolve, reject) => {
     // Spawn demucs: demucs.exe <model> <input> <output_dir> <num_threads>
     var numThreads = Math.max(1, Math.min(os.cpus().length, 8));
-    demucsProcess = spawn(demucsBin, [modelFile, filePath, outputDir + path.sep, String(numThreads)], {
+    demucsProcess = spawn(demucsBin, [modelFile, resolvedInput, outputDir + path.sep, String(numThreads)], {
       windowsHide: true
     });
 
