@@ -42,6 +42,19 @@ function songsTab(){
   if(S.songsSubTab==="stems") return h+stemsSection();
   if(S.songsSubTab==="perform") return h+performSubTab();
 
+  // Performance Daily Challenge card
+  if(S.performanceDailyChallenge){
+    h+='<div class="card mb20" style="border:2px solid '+(S.performanceDailyComplete?"#4ECDC4":"#FFE66D")+'">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">';
+    h+='<div><h3 style="margin:0;font-size:15px;font-weight:800;color:var(--text-primary)">'+(S.performanceDailyComplete?'&#9989;':'&#127919;')+' Performance Daily</h3>';
+    h+='<p style="margin:3px 0 0;font-size:12px;color:var(--text-muted)">'+escHTML(S.performanceDailyChallenge.label)+'</p>';
+    h+='<p style="margin:2px 0 0;font-size:11px;color:var(--text-dim)">+'+S.performanceDailyChallenge.xp+' XP</p></div>';
+    if(!S.performanceDailyComplete){
+      h+='<button class="btn" onclick="act(\'openPerformanceDaily\')" style="background:linear-gradient(135deg,#FFE66D,#FF8A5C);color:#333;font-weight:800">Go</button>';
+    }
+    h+='</div></div>';
+  }
+
   // Search filter
   h+='<div style="margin-bottom:12px"><input class="set-input" type="text" placeholder="Search by title, artist, or chord..." value="'+escHTML(S.songFilter)+'" oninput="act(\'songFilter\',this.value)" aria-label="Filter songs"/></div>';
 

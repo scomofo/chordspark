@@ -70,6 +70,19 @@ function performSongPage() {
   }
   h += '</div></div>';
 
+  // Recommendations
+  if(typeof buildPerformanceRecommendationsForSong==="function"){
+    var recs=buildPerformanceRecommendationsForSong(sid);
+    if(recs&&recs.length){
+      h+='<div class="card mb20"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">Recommended</div>';
+      for(var ri=0;ri<Math.min(3,recs.length);ri++){
+        h+='<div style="font-size:13px;color:var(--text-primary);margin-bottom:4px">'+escHTML(recs[ri].label)+'</div>';
+        h+='<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">'+escHTML(recs[ri].reason)+'</div>';
+      }
+      h+='</div>';
+    }
+  }
+
   // Start buttons
   h += '<div class="flex-col" style="gap:8px">';
   h += '<button class="btn" onclick="act(\'performStartFromSong\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;padding:14px;font-size:16px;font-weight:800">&#127918; Start Performance</button>';

@@ -116,6 +116,9 @@ var S={
   performArrangementType:"chords",
   performanceStats:{},
   performanceUnlocks:{},
+  performanceDailyChallenge:null,
+  performanceDailyComplete:false,
+  performanceDailyHistory:[],
   performMidiOffsetMs:0,
   performAudioOffsetMs:0,
   performCalibrated:false,
@@ -137,7 +140,8 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "performMode","performDifficulty","performSpeed","performPracticePreset","performAssistHints","performCountIn",
   "performPracticeMode","performSongStats","performArrangementType",
   "performanceStats","performanceUnlocks",
-  "performMidiOffsetMs","performAudioOffsetMs","performCalibrated"];
+  "performMidiOffsetMs","performAudioOffsetMs","performCalibrated",
+  "performanceDailyHistory"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;

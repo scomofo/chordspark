@@ -1141,6 +1141,22 @@ window.act=function(a,v){
     }
     return;
   }
+  if(a==="openPerformanceDaily"){
+    var ch=choosePerformanceDailyChallenge();
+    if(!ch){render();return;}
+    if(ch.songId){
+      for(var di=0;di<SONGS.length;di++){
+        var dsid=(SONGS[di].title||"").toLowerCase().replace(/[^a-z0-9]+/g,"_");
+        if(dsid===ch.songId){
+          S.performSongData=SONGS[di];S.performSongId=ch.songId;
+          S.performArrangementType=ch.arrangementType||"chords";
+          S.performDifficulty=ch.difficultyId||"normal";
+          S.screen=SCR.PERFORM_SONG;render();return;
+        }
+      }
+    }
+    S.tab=TAB.SONGS;S.screen=SCR.HOME;render();return;
+  }
   if(a==="performArrangement"){S.performArrangementType=v||"chords";saveState();render();return;}
   if(a==="performStartFromSong"){
     if(S.performSongData){
@@ -1405,4 +1421,5 @@ try{preloadGuitarAudio();}catch(e){console.error("ChordSpark: guitar audio prelo
 document.getElementById("no-js").style.display="none";
 document.getElementById("header").style.display="flex";
 document.getElementById("app").style.display="block";
+try{if(typeof choosePerformanceDailyChallenge==="function")choosePerformanceDailyChallenge();}catch(e){}
 render();

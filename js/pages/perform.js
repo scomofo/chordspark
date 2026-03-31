@@ -313,6 +313,18 @@ function performDonePage() {
   h += '<button class="btn" onclick="act(\'performRetryPhrase\')" style="background:linear-gradient(135deg,#FF6B6B,#FFE66D);color:#333">&#128170; Retry Weakest</button>';
   h += '<button class="btn" onclick="act(\'tab\',\'songs\')" style="background:#4ECDC4;color:#fff">&#127968; Songs</button>';
   h += '</div>';
+
+  // Next step recommendation
+  if(typeof buildPerformanceRecommendationsForSong==="function"&&r.title){
+    var songId=(r.title||"").toLowerCase().replace(/[^a-z0-9]+/g,"_");
+    var nextRecs=buildPerformanceRecommendationsForSong(songId);
+    if(nextRecs&&nextRecs.length){
+      h+='<div class="card" style="margin-top:12px;text-align:left"><div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px">Next Step</div>';
+      h+='<div style="font-size:13px;color:var(--text-primary)">'+escHTML(nextRecs[0].label)+'</div>';
+      h+='<div style="font-size:11px;color:var(--text-dim)">'+escHTML(nextRecs[0].reason)+'</div></div>';
+    }
+  }
+
   h += '</div>';
   return h;
 }

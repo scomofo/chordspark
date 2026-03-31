@@ -224,7 +224,17 @@ var BADGES=[
   {id:"drill_5",label:"Quick Fingers!",icon:"&#9889;",desc:"Complete 5 drills",check:function(){return S.drillCount>=5;}},
   {id:"daily_3",label:"Challenger!",icon:"&#127941;",desc:"Complete 3 daily challenges",check:function(){return S.dailyDone>=3;}},
   {id:"quiz_10",label:"Brain Power!",icon:"&#129504;",desc:"10 quiz questions right",check:function(){return S.quizCorrect>=10;}},
-  {id:"songs_3",label:"Songwriter!",icon:"&#127925;",desc:"Practice 3 songs",check:function(){return S.songsPlayed>=3;}}
+  {id:"songs_3",label:"Songwriter!",icon:"&#127925;",desc:"Practice 3 songs",check:function(){return S.songsPlayed>=3;}},
+  {id:"perf_first",label:"First Performance",desc:"Complete your first performance run",icon:"\u{1F3B8}"},
+  {id:"perf_3star",label:"Rising Star",desc:"Earn 3 stars on any performance",icon:"\u{2B50}"},
+  {id:"perf_5star",label:"Guitar Hero",desc:"Earn 5 stars on any performance",icon:"\u{1F31F}"},
+  {id:"perf_10runs",label:"Dedicated Performer",desc:"Complete 10 performance runs",icon:"\u{1F3AF}"},
+  {id:"perf_mastered",label:"Song Master",desc:"Master a song in performance mode",icon:"\u{1F451}"},
+  {id:"perf_rhythm",label:"Rhythm Player",desc:"Complete a rhythm arrangement",icon:"\u{1F941}"},
+  {id:"perf_pro",label:"Pro Player",desc:"Earn 3+ stars on Pro difficulty",icon:"\u{1F525}"},
+  {id:"perf_daily",label:"Daily Performer",desc:"Complete a performance daily challenge",icon:"\u{1F4C5}"},
+  {id:"perf_streak3",label:"Performance Streak",desc:"Complete 3 daily performance challenges",icon:"\u{1F525}"},
+  {id:"perf_allsongs",label:"Completionist",desc:"Play every song in performance mode",icon:"\u{1F3C6}"}
 ];
 
 // ===== STRUM PATTERNS =====

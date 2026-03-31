@@ -346,6 +346,68 @@ function finishPerformance() {
     }
   }
 
+  // Check daily challenge completion
+  if(S.performanceDailyChallenge&&!S.performanceDailyComplete){
+    var dc=S.performanceDailyChallenge,dr=S.performResults;
+    var matchSong=!dc.songId||dc.songId===(S.performChartId||"").split("_")[0];
+    var completed=false;
+    if(dc.type==="full_run"&&dr.totalEvents>0)completed=true;
+    if(dc.type==="retry_run"&&dr.accuracy>=70)completed=true;
+    if(dc.type==="weakest_phrase"&&dr.accuracy>=(dc.target&&dc.target.accuracy||85))completed=true;
+    if(dc.type==="promote_difficulty"&&dr.stars>=(dc.target&&dc.target.stars||3))completed=true;
+    if(dc.type==="try_rhythm"&&(S.performChart&&S.performChart.arrangementType==="rhythm_chords"))completed=true;
+    if(completed){
+      var bonusXp=markPerformanceDailyComplete();
+      if(bonusXp>0){S.xp+=bonusXp;S.xpToast={amount:bonusXp,time:Date.now()};}
+    }
+  }
+
+  // Performance badges
+  (function(){
+    var r=S.performResults;if(!r)return;
+    var b=S.earnedBadges;if(!Array.isArray(b))return;
+    function award(id){if(b.indexOf(id)<0){b.push(id);S.newBadge=null;for(var bi=0;bi<BADGES.length;bi++){if(BADGES[bi].id===id){S.newBadge=BADGES[bi];break;}}}}
+
+    // First performance
+    award("perf_first");
+
+    // Star badges
+    if(r.stars>=3)award("perf_3star");
+    if(r.stars>=5)award("perf_5star");
+
+    // Run count
+    var totalRuns=0;
+    for(var k in S.performanceStats){if(S.performanceStats[k]&&S.performanceStats[k].runs)totalRuns+=S.performanceStats[k].runs;}
+    if(totalRuns>=10)award("perf_10runs");
+
+    // Mastery
+    for(var mk in S.performanceStats){if(S.performanceStats[mk]&&S.performanceStats[mk].mastery==="mastered"){award("perf_mastered");break;}}
+
+    // Rhythm
+    if(S.performChart&&S.performChart.arrangementType==="rhythm_chords")award("perf_rhythm");
+
+    // Pro
+    if(S.performDifficulty==="pro"&&r.stars>=3)award("perf_pro");
+
+    // Daily
+    if(S.performanceDailyComplete)award("perf_daily");
+
+    // Daily streak
+    if(Array.isArray(S.performanceDailyHistory)&&S.performanceDailyHistory.length>=3)award("perf_streak3");
+
+    // All songs played
+    if(typeof SONGS!=="undefined"&&Array.isArray(SONGS)){
+      var playedSongs=0,totalSongs=0;
+      for(var si=0;si<SONGS.length;si++){
+        if(!SONGS[si].progression||!SONGS[si].progression.length)continue;
+        totalSongs++;
+        var sid=(SONGS[si].title||"").toLowerCase().replace(/[^a-z0-9]+/g,"_");
+        for(var pk in S.performanceStats){if(pk.indexOf(sid)===0&&S.performanceStats[pk].runs>0){playedSongs++;break;}}
+      }
+      if(totalSongs>0&&playedSongs>=totalSongs)award("perf_allsongs");
+    }
+  })();
+
   saveState();
   S.screen = SCR.PERFORM_DONE;
   render();
