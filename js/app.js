@@ -276,10 +276,12 @@ function _loadStemFileUrls(paths){
     (function(name){
       window.electron.stems.getFileUrl(paths[name]).then(function(url){
         urlMap[name]=url;
+      }).catch(function(e){
+        console.error("ChordSpark: stem load failed for "+name,e);
+      }).then(function(){
         loaded++;
         if(loaded===names.length){
           loadStemUrls(urlMap);
-          // Apply current toggle state
           for(var j=0;j<STEM_NAMES.length;j++){
             var sn=STEM_NAMES[j];
             if(urlMap[sn])setStemMuted(sn,!S.stemToggles[sn]);
@@ -296,7 +298,7 @@ var _prevChordKey="";
 
 // ===== CLEANUP =====
 function stopAllTimers(){
-  clearTimeout(T.session);clearTimeout(T.drill);clearTimeout(T.daily);
+  clearTimeout(T.session);clearTimeout(T.drill);clearTimeout(T.daily);clearInterval(T.fingerEx);
   clearInterval(T.strum);clearInterval(T.song);clearInterval(T.metro);clearInterval(T.prog);
   if(S.metronomeOn){stopMetronome();S.metronomeOn=false;}
   if(S.chordDetectOn)stopChordDetect();
@@ -477,7 +479,8 @@ window.act=function(a,v){
     render();return;
   }
   if(a==="openSong"){
-    var sg;for(var i=0;i<SONGS.length;i++)if(SONGS[i].title===v)sg=SONGS[i];
+    var sg=typeof v==="number"?SONGS[v]:null;
+    if(!sg){for(var i=0;i<SONGS.length;i++)if(SONGS[i].title===v){sg=SONGS[i];break;}}
     if(sg&&sg.level<=S.level){S.selectedSong=sg;S.songPlaying=false;S.songBeat=0;clearInterval(T.song);S.screen=SCR.SONG;render();}return;
   }
   if(a==="toggleSong"){
@@ -572,13 +575,13 @@ window.act=function(a,v){
     if(!ex)return;
     S.fingerExId=v;S.fingerExTimer=ex.duration;S.fingerExActive=true;S.fingerExCount=0;
     snd("start");
-    clearInterval(T.drill);
-    T.drill=setInterval(function(){
+    clearInterval(T.fingerEx);
+    T.fingerEx=setInterval(function(){
       if(!S.fingerExActive)return;
       S.fingerExTimer--;
       addPracticeSecond();
       if(S.fingerExTimer<=0){
-        clearInterval(T.drill);S.fingerExActive=false;
+        clearInterval(T.fingerEx);S.fingerExActive=false;
         snd("complete");S.xp+=10;
         if(typeof S.fingerStats!=="object"||S.fingerStats===null)S.fingerStats={};
         S.fingerStats[v]=(S.fingerStats[v]||0)+1;
@@ -590,7 +593,7 @@ window.act=function(a,v){
     render();return;
   }
   if(a==="stopFingerEx"){
-    clearInterval(T.drill);S.fingerExActive=false;S.fingerExId=null;render();return;
+    clearInterval(T.fingerEx);S.fingerExActive=false;S.fingerExId=null;render();return;
   }
   // Guided sessions
   if(a==="guidedStart"){
@@ -621,8 +624,9 @@ window.act=function(a,v){
     if(plan){
       if(!Array.isArray(S.completedGuidedSessions))S.completedGuidedSessions=[];
       if(S.completedGuidedSessions.indexOf(plan.num)<0)S.completedGuidedSessions.push(plan.num);
-      S.xp+=30;S.sessions++;S.streak++;
-      S.lastSessionDate=new Date().toISOString().split("T")[0];
+      S.xp+=30;S.sessions++;
+      var today=new Date().toISOString().split("T")[0];
+      if(S.lastSessionDate!==today){S.streak++;S.lastSessionDate=today;}
       if(plan.newMove&&plan.newMove.chord){
         var k=plan.newMove.chord;
         S.chordProgress[k]=Math.min((S.chordProgress[k]||0)+25,100);
@@ -1196,6 +1200,8 @@ function _renderInner(){
   else if(S.screen===SCR.STEMS)content=stemsPage();
   else if(S.screen===SCR.GUIDED)content=guidedSessionPage();
   else if(S.screen===SCR.GUIDED_DONE)content=guidedDonePage();
+  else if(S.screen===SCR.PERFORM)content=performPage();
+  else if(S.screen===SCR.PERFORM_DONE)content=performDonePage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';

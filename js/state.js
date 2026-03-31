@@ -74,7 +74,40 @@ var S={
   // Chord Runner
   runnerActive:false,runnerScore:0,runnerCombo:0,runnerMaxCombo:0,
   runnerLives:3,runnerTarget:null,runnerObstacles:[],runnerSpeed:2,
-  runnerLastSpawn:0,runnerStartTime:0,runnerResults:null,runnerHighScore:0,runnerDistance:0
+  runnerLastSpawn:0,runnerStartTime:0,runnerResults:null,runnerHighScore:0,runnerDistance:0,
+  performMode:"midi",
+  performDifficulty:"normal",
+  performChartId:null,
+  performChart:null,
+  performPlaying:false,
+  performPaused:false,
+  performCurrentSec:0,
+  performStartSec:0,
+  performSpeed:1.0,
+  performScrollSpeed:180,
+  performLoop:null,
+  performScore:0,
+  performCombo:0,
+  performMaxCombo:0,
+  performAccuracy:0,
+  performPhraseIdx:0,
+  performResults:null,
+  performStarRating:0,
+  performPhraseStats:[],
+  performWindowPerfectMs:70,
+  performWindowGoodMs:140,
+  performWindowMissMs:220,
+  performInputSource:"midi",
+  performInputNotes:[],
+  performPracticePreset:"no_guitar",
+  performAssistHints:true,
+  performCountIn:true,
+  performCountdownActive:false,
+  performCountdownBeats:0,
+  performHighwayLookaheadSec:3.0,
+  performLastHitLabel:"",
+  performLastHitTime:0,
+  performDebug:false
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -89,7 +122,8 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "history","customSets","earTrainScore","transitionStats",
   "dailyGoalMinutes","todayPracticeSeconds","lastPracticeDate","goalReachedToday","goalStreak",
   "importedSongs","strumTone","midiEnabled","midiOutputId","audioInputId","lastChordName","focusMode","runnerHighScore",
-  "onboardingDone","practiceIntention","guidedSession","completedGuidedSessions","fingerStats"];
+  "onboardingDone","practiceIntention","guidedSession","completedGuidedSessions","fingerStats",
+  "performMode","performDifficulty","performSpeed","performPracticePreset","performAssistHints","performCountIn"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;
@@ -137,6 +171,7 @@ function resetProgress(){
     var val=S[PERSIST_FIELDS[i]];
     _undoBackup[PERSIST_FIELDS[i]]=JSON.parse(JSON.stringify(val));
   }
+  _undoBackup._backupTime=Date.now();
   try{localStorage.setItem(SAVE_KEY+"_backup",JSON.stringify(_undoBackup));}catch(e){console.error("ChordSpark: undo backup save failed",e);}
   // Clear state in memory (localStorage cleared only when undo timer expires)
   S.xp=0;S.streak=0;S.sessions=0;S.drillCount=0;S.dailyDone=0;S.quizCorrect=0;S.songsPlayed=0;
@@ -178,6 +213,11 @@ function recoverFromCrash(){
     var backup=localStorage.getItem(SAVE_KEY+"_backup");
     if(backup){
       var data=JSON.parse(backup);
+      // Only restore if backup has a valid timestamp and is less than 1 hour old
+      if(!data._backupTime||Date.now()-data._backupTime>3600000){
+        localStorage.removeItem(SAVE_KEY+"_backup");
+        return;
+      }
       for(var i=0;i<PERSIST_FIELDS.length;i++){
         if(data[PERSIST_FIELDS[i]]!==undefined)S[PERSIST_FIELDS[i]]=data[PERSIST_FIELDS[i]];
       }

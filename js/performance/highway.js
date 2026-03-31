@@ -1,0 +1,1 @@
+/* ===== ChordSpark Performance: Highway Renderer ===== */
