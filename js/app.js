@@ -307,6 +307,7 @@ function stopAllTimers(){
   if(S.progPlaying){S.progPlaying=false;}
   cleanupStems();S.stemPlaying=false;
   S.timerActive=false;S.strumActive=false;S.songPlaying=false;
+  if(S.performPlaying||S.performPaused){stopPerformance();}
 }
 
 // ===== ACTION DISPATCHER =====
@@ -1112,6 +1113,25 @@ window.act=function(a,v){
   if(a==="toggleShortcuts"){S.showShortcuts=!S.showShortcuts;render();return;}
   // === Undo ===
   if(a==="undoReset"){undoReset();return;}
+  // === Performance Mode ===
+  if(a==="openPerform"){startPerformance(v);return;}
+  if(a==="startPerform"){startPerformance(v);return;}
+  if(a==="pausePerform"){pausePerformance();return;}
+  if(a==="resumePerform"){resumePerformance();return;}
+  if(a==="stopPerform"){stopPerformance();S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
+  if(a==="performMode"){S.performMode=v;S.performInputSource=v;PerformanceInput.start(v);saveState();render();return;}
+  if(a==="performDifficulty"){S.performDifficulty=v;saveState();render();return;}
+  if(a==="performSpeed"){
+    S.performSpeed=parseFloat(v);PerformanceTransport.setSpeed(S.performSpeed);saveState();render();return;
+  }
+  if(a==="performLoopPhrase"){
+    var ph=getPerformancePhraseForTime(S.performChart,S.performCurrentSec);
+    if(ph)setPerformanceLoop({startSec:ph.startSec,endSec:ph.endSec,phraseId:ph.id});
+    return;
+  }
+  if(a==="performClearLoop"){clearPerformanceLoop();return;}
+  if(a==="performPracticePreset"){applyPerformanceStemPreset(v);render();return;}
+  if(a==="performRetry"){startPerformance(S.performChartId);return;}
   // === Back ===
   if(a==="back"){
     stopAllTimers();
@@ -1238,6 +1258,7 @@ document.addEventListener("keydown",function(e){
     if(S.screen===SCR.SESSION){act("toggleTimer");return;}
     if(S.screen===SCR.STRUM){act("toggleStrum");return;}
     if(S.screen===SCR.SONG){act("toggleSong");return;}
+    if(S.screen===SCR.PERFORM){if(S.performPaused)act("resumePerform");else act("pausePerform");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.RHYTHM&&S.rhythmActive){act("rhythmTap");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.RUNNER&&S.runnerActive){act("runnerStrum");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.BUILD&&S.progChords.length>=2){act("progPlay");return;}

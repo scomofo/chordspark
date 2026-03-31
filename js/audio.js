@@ -187,17 +187,32 @@ function metroClick(accent){
   }catch(e){}
 }
 
+var _metroNextTime=0;
+var _metroLookahead=0.1; // seconds to look ahead
+var _metroScheduleInterval=25; // ms between scheduler calls
 function startMetronome(){
-  S.metronomeOn=true;S._metroBeat=0;metroClick(true);render();
-  var ms=60000/S.metronomeBpm;
-  T.metro=setInterval(function(){
-    S._metroBeat=(S._metroBeat+1)%S._metroBeats;
-    metroClick(S._metroBeat===0);render();
-  },ms);
+  S.metronomeOn=true;S._metroBeat=0;
+  if(!audioCtx&&AC)audioCtx=new AC();
+  if(audioCtx)_metroNextTime=audioCtx.currentTime;
+  _metroSchedule();
+  render();
+}
+function _metroSchedule(){
+  if(!S.metronomeOn)return;
+  if(audioCtx){
+    var secPerBeat=60/S.metronomeBpm;
+    while(_metroNextTime<audioCtx.currentTime+_metroLookahead){
+      metroClick(S._metroBeat===0);
+      S._metroBeat=(S._metroBeat+1)%S._metroBeats;
+      _metroNextTime+=secPerBeat;
+    }
+  }
+  T.metro=setTimeout(_metroSchedule,_metroScheduleInterval);
+  render();
 }
 
 function stopMetronome(){
-  S.metronomeOn=false;clearInterval(T.metro);T.metro=null;render();
+  S.metronomeOn=false;clearTimeout(T.metro);T.metro=null;render();
 }
 
 // ===== TUNER (YIN algorithm) =====
@@ -441,6 +456,7 @@ function startChordDetect(){
         var rawNotes=detectFromFFT(an,ctx.sampleRate);
         var found=getStableChordNotes(rawNotes);
         S.detectedNotes=found;
+        if(S.screen===SCR.PERFORM&&S.performMode==="mic"&&typeof PerformanceInput!=="undefined"){PerformanceInput.onMicUpdate(S.detectedNotes);}
         var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
         if(expected.length>0&&found.length>0){
           var hits=0;for(var i=0;i<expected.length;i++)if(found.indexOf(expected[i])!==-1)hits++;
@@ -608,6 +624,8 @@ function _setupMIDIInputs(){
 
 function _handleMIDIMessage(event){
   var cmd=event.data[0]&0xf0,note=event.data[1],vel=event.data[2];
+  // Forward to performance input when perform mode is active
+  if(S.screen===SCR.PERFORM&&typeof PerformanceInput!=="undefined"){PerformanceInput.onMidiMessage(event);}
   if(cmd===0x90&&vel>0){
     // Note On
     _midiInputNotes[note]=true;
@@ -633,6 +651,8 @@ function _processMIDIChord(){
   if(unique.length>=2){
     // Feed into chord detection
     S.detectedNotes=unique;
+    // Forward to performance input in mic mode
+    if(S.screen===SCR.PERFORM&&S.performMode==="mic"&&typeof PerformanceInput!=="undefined"){PerformanceInput.onMicUpdate(unique);}
     var expected=getExpectedNotes(S.currentChord?S.currentChord.name:"");
     if(expected.length>0){
       var hits=0;for(var i=0;i<expected.length;i++)if(unique.indexOf(expected[i])!==-1)hits++;

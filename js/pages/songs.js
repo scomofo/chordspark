@@ -34,11 +34,13 @@ function songsTab(){
   h+='<button class="community-tab'+(S.songsSubTab==="community"?" active":"")+'" onclick="act(\'songsSubTab\',\'community\')">&#127760; Community</button>';
   h+='<button class="community-tab'+(S.songsSubTab==="import"?" active":"")+'" onclick="act(\'songsSubTab\',\'import\')">&#128196; Import</button>';
   h+='<button class="community-tab'+(S.songsSubTab==="stems"?" active":"")+'" onclick="act(\'songsSubTab\',\'stems\')">&#127911; Stems</button>';
+  h+='<button class="songs-subtab'+(S.songsSubTab==="perform"?" active":"")+'"'+clickableDiv("act(\'songsSubTab\',\'perform\')")+'>&#127918; Perform</button>';
   h+='</div>';
 
   if(S.songsSubTab==="community") return h+communitySection();
   if(S.songsSubTab==="import") return h+importSection();
   if(S.songsSubTab==="stems") return h+stemsSection();
+  if(S.songsSubTab==="perform") return h+performSubTab();
 
   // Search filter
   h+='<div style="margin-bottom:12px"><input class="set-input" type="text" placeholder="Search by title, artist, or chord..." value="'+escHTML(S.songFilter)+'" oninput="act(\'songFilter\',this.value)" aria-label="Filter songs"/></div>';
@@ -84,7 +86,7 @@ function songsTab(){
   h+='<div class="flex-col">';
   for(var i=0;i<filtered.length;i++){
     var s=filtered[i],lk=s.level>S.level;
-    h+='<div class="card" style="opacity:'+(lk?0.4:1)+';cursor:'+(lk?"default":"pointer")+'"'+(lk?'':clickableDiv("act(\'openSong\',\'"+s.title.replace(/'/g,"\\'")+"\')"))+'">';
+    h+='<div class="card" style="opacity:'+(lk?0.4:1)+';cursor:'+(lk?"default":"pointer")+'"'+(lk?'':clickableDiv("act(\'openSong\',"+i+")"))+'">';
     h+='<div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text-primary)">'+escHTML(s.title)+'</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text-muted)">'+escHTML(s.artist)+'</p></div><div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+LC[s.level]+'">Lvl '+s.level+'</div><div style="font-size:11px;color:var(--text-muted)">'+s.bpm+' BPM &bull; '+s.chords.length+' chords</div></div></div>';
     h+='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">';
     for(var j=0;j<s.chords.length;j++)
@@ -333,6 +335,23 @@ function stemsPage(){
   h+='<span style="font-size:12px;color:var(--text-muted);font-weight:700;min-width:36px">'+Math.round(S.stemVolume*100)+'%</span>';
   h+='</div></div>';
 
+  h+='</div>';
+  return h;
+}
+
+function performSubTab(){
+  var h='<div class="card mb20" style="text-align:center;padding:24px">';
+  h+='<div style="font-size:48px;margin-bottom:12px">&#127928;</div>';
+  h+='<h3 style="font-size:18px;font-weight:900;color:var(--text-primary);margin:0 0 8px">Performance Mode</h3>';
+  h+='<p style="font-size:13px;color:var(--text-muted);margin:0 0 16px">Play along with a scrolling chord highway. MIDI guitar or mic input.</p>';
+  h+='<div class="card" style="cursor:pointer;border:2px solid #4ECDC4;margin-bottom:12px"'
+    +clickableDiv("act(\'openPerform\',\'demo_progression\')")+'>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+  h+='<div style="text-align:left"><h4 style="margin:0;font-size:15px;font-weight:800;color:var(--text-primary)">Demo Progression</h4>';
+  h+='<p style="margin:2px 0 0;font-size:12px;color:var(--text-muted)">ChordSpark &bull; 90 BPM &bull; 8 chords</p></div>';
+  h+='<div style="font-size:24px">&#127918;</div></div></div>';
+  h+='<p style="font-size:11px;color:var(--text-muted)">More charts coming soon! MIDI input: '+
+    (S.midiEnabled?'<span style="color:#4ECDC4;font-weight:700">Connected</span>':'<span style="color:#FF6B6B">Off &mdash; enable in Tools</span>')+'</p>';
   h+='</div>';
   return h;
 }

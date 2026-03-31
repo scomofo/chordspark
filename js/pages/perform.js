@@ -1,4 +1,142 @@
 /* ===== ChordSpark: Perform Page ===== */
 
-function performPage(){ return '<div class="perform-page"><p>Performance mode loading...</p></div>'; }
-function performDonePage(){ return '<div class="perform-page"><p>Results loading...</p></div>'; }
+function performPage() {
+  var chart = S.performChart;
+  if (!chart) return '<div class="perform-page text-center"><p>No chart loaded.</p><button class="btn" onclick="act(\'back\')">Back</button></div>';
+
+  var nowSec = S.performCurrentSec;
+  var phrase = getPerformancePhraseForTime(chart, nowSec);
+  var phraseName = phrase ? phrase.name : "";
+
+  var h = '<div class="perform-page">';
+
+  // Header bar
+  h += '<div class="perform-header">';
+  h += '<button class="back-btn" onclick="act(\'stopPerform\')">&larr; Exit</button>';
+  h += '<div class="perform-title">';
+  h += '<strong>' + escHTML(chart.title) + '</strong>';
+  h += '<span class="perform-artist">' + escHTML(chart.artist || "") + '</span>';
+  h += '</div>';
+  h += '<div class="perform-phrase-name">' + escHTML(phraseName) + '</div>';
+  h += '</div>';
+
+  // Score strip
+  h += '<div class="perform-score-strip">';
+  h += '<div class="perform-stat"><span class="perform-stat-val">' + S.performScore + '</span><span class="perform-stat-label">Score</span></div>';
+  h += '<div class="perform-stat"><span class="perform-stat-val">' + S.performAccuracy + '%</span><span class="perform-stat-label">Accuracy</span></div>';
+  h += '<div class="perform-stat"><span class="perform-stat-val">' + S.performCombo + 'x</span><span class="perform-stat-label">Combo</span></div>';
+  h += '</div>';
+
+  // Hit feedback
+  if (S.performLastHitLabel && Date.now() - S.performLastHitTime < 800) {
+    h += '<div class="perform-hit-feedback">' + escHTML(S.performLastHitLabel) + '</div>';
+  }
+
+  // Highway
+  h += renderPerformanceHighway(chart, nowSec);
+
+  // Input source badge
+  h += '<div class="perform-input-badge">' + (S.performInputSource === "midi" ? "MIDI" : "MIC") + '</div>';
+
+  // Controls
+  h += '<div class="perform-controls">';
+
+  // Pause/Resume
+  if (S.performPaused) {
+    h += '<button class="btn perform-ctrl-btn" onclick="act(\'resumePerform\')" style="background:#4ECDC4;color:#fff">&#9654; Resume</button>';
+  } else {
+    h += '<button class="btn perform-ctrl-btn" onclick="act(\'pausePerform\')" style="background:#FFE66D;color:#333">&#9208; Pause</button>';
+  }
+
+  // Mode toggle
+  h += '<div class="perform-toggle-group"><span class="perform-toggle-label">Input</span>';
+  h += '<button class="btn btn-sm' + (S.performMode === "midi" ? " active" : "") + '" onclick="act(\'performMode\',\'midi\')">MIDI</button>';
+  h += '<button class="btn btn-sm' + (S.performMode === "mic" ? " active" : "") + '" onclick="act(\'performMode\',\'mic\')">Mic</button>';
+  h += '</div>';
+
+  // Difficulty toggle
+  h += '<div class="perform-toggle-group"><span class="perform-toggle-label">Difficulty</span>';
+  var diffs = ["easy", "normal", "pro"];
+  for (var d = 0; d < diffs.length; d++) {
+    h += '<button class="btn btn-sm' + (S.performDifficulty === diffs[d] ? " active" : "") + '" onclick="act(\'performDifficulty\',\'' + diffs[d] + '\')">' + diffs[d].charAt(0).toUpperCase() + diffs[d].slice(1) + '</button>';
+  }
+  h += '</div>';
+
+  // Speed toggle
+  h += '<div class="perform-toggle-group"><span class="perform-toggle-label">Speed</span>';
+  var speeds = [0.5, 0.75, 1.0];
+  for (var sp = 0; sp < speeds.length; sp++) {
+    h += '<button class="btn btn-sm' + (S.performSpeed === speeds[sp] ? " active" : "") + '" onclick="act(\'performSpeed\',' + speeds[sp] + ')">' + Math.round(speeds[sp] * 100) + '%</button>';
+  }
+  h += '</div>';
+
+  // Practice presets
+  h += '<div class="perform-toggle-group"><span class="perform-toggle-label">Mix</span>';
+  var presets = [
+    { id: "full_mix", label: "Full" },
+    { id: "no_guitar", label: "No Guitar" },
+    { id: "guitar_quiet", label: "Quiet Guitar" },
+    { id: "guitar_solo", label: "Solo Guitar" }
+  ];
+  for (var pr = 0; pr < presets.length; pr++) {
+    h += '<button class="btn btn-sm' + (S.performPracticePreset === presets[pr].id ? " active" : "") + '" onclick="act(\'performPracticePreset\',\'' + presets[pr].id + '\')">' + presets[pr].label + '</button>';
+  }
+  h += '</div>';
+
+  // Loop phrase
+  if (S.performLoop) {
+    h += '<button class="btn btn-sm perform-ctrl-btn" onclick="act(\'performClearLoop\')" style="background:#FF6B6B;color:#fff">&#128260; Clear Loop</button>';
+  } else {
+    h += '<button class="btn btn-sm perform-ctrl-btn" onclick="act(\'performLoopPhrase\')" style="background:#4ECDC4;color:#fff">&#128257; Loop Phrase</button>';
+  }
+
+  h += '</div>'; // .perform-controls
+  h += '</div>'; // .perform-page
+  return h;
+}
+
+function performDonePage() {
+  var r = S.performResults;
+  if (!r) return '<div class="perform-page text-center"><p>No results.</p><button class="btn" onclick="act(\'back\')">Back</button></div>';
+
+  var h = '<div class="perform-page text-center" style="padding-top:20px">';
+  h += '<div style="font-size:56px;animation:bn .6s ease">&#127928;</div>';
+  h += '<h2 style="font-size:26px;font-weight:900;color:var(--text-primary)">Performance Complete!</h2>';
+  h += '<p style="color:var(--text-dim)">' + escHTML(r.title || "") + ' by ' + escHTML(r.artist || "") + '</p>';
+
+  // Stars
+  h += '<div style="font-size:32px;margin:12px 0">';
+  for (var s = 0; s < 5; s++) {
+    h += s < r.stars ? '&#11088;' : '&#9734;';
+  }
+  h += '</div>';
+
+  // Stats cards
+  h += '<div class="card mb20"><div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap">';
+  h += '<div><div style="font-size:28px;font-weight:900;color:#FFE66D">' + r.score + '</div><div style="font-size:11px;color:var(--text-muted)">Score</div></div>';
+  h += '<div><div style="font-size:28px;font-weight:900;color:#4ECDC4">' + r.accuracy + '%</div><div style="font-size:11px;color:var(--text-muted)">Accuracy</div></div>';
+  h += '<div><div style="font-size:28px;font-weight:900;color:#FF6B6B">' + r.maxCombo + 'x</div><div style="font-size:11px;color:var(--text-muted)">Max Combo</div></div>';
+  h += '</div></div>';
+
+  // Phrase breakdown
+  if (r.phraseStats && r.phraseStats.length > 0) {
+    h += '<div class="card mb20" style="text-align:left"><h3 style="font-size:14px;font-weight:800;margin:0 0 10px;color:var(--text-primary)">Phrase Breakdown</h3>';
+    for (var pi = 0; pi < r.phraseStats.length; pi++) {
+      var ps = r.phraseStats[pi];
+      var pct = ps.total > 0 ? Math.round(ps.scoreSum / ps.total * 100) : 0;
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">';
+      h += '<span style="font-size:13px;font-weight:700;color:var(--text-primary)">' + escHTML(ps.name || "Phrase " + (pi + 1)) + '</span>';
+      h += '<span style="font-size:12px;color:var(--text-muted)">' + ps.perfects + 'P / ' + ps.goods + 'G / ' + ps.oks + 'O / ' + ps.misses + 'M &mdash; ' + pct + '%</span>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
+  // Buttons
+  h += '<div class="flex-col">';
+  h += '<button class="btn" onclick="act(\'performRetry\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff">&#128257; Retry</button>';
+  h += '<button class="btn" onclick="act(\'tab\',\'songs\')" style="background:#4ECDC4;color:#fff">&#127968; Songs</button>';
+  h += '</div>';
+  h += '</div>';
+  return h;
+}

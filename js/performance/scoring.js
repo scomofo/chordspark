@@ -1,1 +1,120 @@
 /* ===== ChordSpark Performance: Scoring Engine ===== */
+
+function scorePerformanceEvent(event, snapshot, hitDeltaMs, difficulty, mode) {
+  var targetNotes = event.notes || [];
+  var inputNotes = snapshot.pitchClasses || [];
+
+  if (targetNotes.length === 0) return { score: 0, grade: "miss", noteScore: 0, timingScore: 0 };
+
+  var overlap = 0;
+  for (var i = 0; i < targetNotes.length; i++) {
+    if (inputNotes.indexOf(targetNotes[i]) >= 0) overlap++;
+  }
+  var noteScore = overlap / targetNotes.length;
+
+  var absDelta = Math.abs(hitDeltaMs);
+  var timingScore = 0;
+  if (absDelta <= S.performWindowPerfectMs) timingScore = 1.0;
+  else if (absDelta <= S.performWindowGoodMs) timingScore = 0.7;
+  else if (absDelta <= S.performWindowMissMs) timingScore = 0.3;
+  else timingScore = 0;
+
+  var total;
+  if (difficulty === "easy") total = noteScore * 0.85 + timingScore * 0.15;
+  else if (difficulty === "pro") total = noteScore * 0.65 + timingScore * 0.35;
+  else total = noteScore * 0.75 + timingScore * 0.25;
+
+  return {
+    score: Math.round(total * 100) / 100,
+    grade: gradePerformanceScore(total),
+    noteScore: noteScore,
+    timingScore: timingScore
+  };
+}
+
+function gradePerformanceScore(score) {
+  if (score >= 0.9) return "perfect";
+  if (score >= 0.7) return "good";
+  if (score >= 0.45) return "ok";
+  return "miss";
+}
+
+function createEmptyPhraseStats(chart) {
+  var stats = [];
+  for (var i = 0; i < chart.phrases.length; i++) {
+    var p = chart.phrases[i];
+    stats.push({
+      phraseId: p.id,
+      name: p.name,
+      hits: 0,
+      misses: 0,
+      perfects: 0,
+      goods: 0,
+      oks: 0,
+      total: 0,
+      scoreSum: 0,
+      maxCombo: 0,
+      _currentCombo: 0
+    });
+  }
+  return stats;
+}
+
+function updatePhraseStats(phraseStats, event, result) {
+  var pIdx = -1;
+  for (var i = 0; i < phraseStats.length; i++) {
+    if (phraseStats[i].phraseId === event.phraseId) { pIdx = i; break; }
+  }
+  if (pIdx < 0) return;
+
+  var ps = phraseStats[pIdx];
+  ps.total++;
+  ps.scoreSum += result.score;
+
+  if (result.grade === "miss") {
+    ps.misses++;
+    ps._currentCombo = 0;
+  } else {
+    ps.hits++;
+    ps._currentCombo++;
+    if (ps._currentCombo > ps.maxCombo) ps.maxCombo = ps._currentCombo;
+    if (result.grade === "perfect") ps.perfects++;
+    else if (result.grade === "good") ps.goods++;
+    else if (result.grade === "ok") ps.oks++;
+  }
+}
+
+function finalizePerformanceResults(chart, phraseStats) {
+  var totalEvents = chart.events.length;
+  var totalScore = 0;
+  var totalHits = 0;
+  var maxCombo = 0;
+
+  for (var i = 0; i < phraseStats.length; i++) {
+    var ps = phraseStats[i];
+    totalScore += ps.scoreSum;
+    totalHits += ps.hits;
+    if (ps.maxCombo > maxCombo) maxCombo = ps.maxCombo;
+  }
+
+  var accuracy = totalEvents > 0 ? Math.round((totalHits / totalEvents) * 100) : 0;
+  var avgScore = totalEvents > 0 ? totalScore / totalEvents : 0;
+
+  var stars = 0;
+  if (avgScore >= 0.95) stars = 5;
+  else if (avgScore >= 0.85) stars = 4;
+  else if (avgScore >= 0.7) stars = 3;
+  else if (avgScore >= 0.5) stars = 2;
+  else if (avgScore >= 0.3) stars = 1;
+
+  return {
+    title: chart.title,
+    artist: chart.artist,
+    score: Math.round(totalScore * 100),
+    accuracy: accuracy,
+    maxCombo: maxCombo,
+    stars: stars,
+    phraseStats: phraseStats,
+    totalEvents: totalEvents
+  };
+}
