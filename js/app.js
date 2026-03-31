@@ -1132,9 +1132,26 @@ window.act=function(a,v){
     }
     return;
   }
+  if(a==="openPerformSong"){
+    var sgIdx=parseInt(v);
+    if(!isNaN(sgIdx)&&SONGS[sgIdx]){
+      S.performSongData=SONGS[sgIdx];
+      S.performSongId=SONGS[sgIdx].title.toLowerCase().replace(/[^a-z0-9]+/g,"_");
+      S.screen=SCR.PERFORM_SONG;render();
+    }
+    return;
+  }
+  if(a==="performArrangement"){S.performArrangementType=v||"chords";saveState();render();return;}
+  if(a==="performStartFromSong"){
+    if(S.performSongData){
+      var chart=buildPerformanceChartFromSong(S.performSongData,"builtin",S.performArrangementType);
+      if(chart)startPerformance(chart,{difficulty:S.performDifficulty,speed:S.performSpeed});
+    }
+    return;
+  }
   if(a==="pausePerform"){pausePerformance();return;}
   if(a==="resumePerform"){resumePerformance();return;}
-  if(a==="stopPerform"){stopPerformance();S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
+  if(a==="stopPerform"){stopPerformance();if(S.performSongData){S.screen=SCR.PERFORM_SONG;}else{S.screen=SCR.HOME;S.tab=TAB.SONGS;}render();return;}
   if(a==="performMode"){S.performMode=v;S.performInputSource=v;PerformanceInput.start(v);saveState();render();return;}
   if(a==="performDifficulty"){applyPerformanceDifficultyToState(v||"normal");saveState();render();return;}
   if(a==="performSpeed"){
@@ -1147,6 +1164,8 @@ window.act=function(a,v){
   }
   if(a==="performClearLoop"){clearPerformanceLoop();return;}
   if(a==="performPracticePreset"){applyPerformanceStemPreset(v);render();return;}
+  if(a==="performCalibrate"){startCalibration();return;}
+  if(a==="performCalibrateTap"){recordCalibrationTap();return;}
   if(a==="performRetry"){startPerformance(S.performChartId);return;}
   if(a==="performDebug"){S.performDebug=!S.performDebug;render();return;}
   if(a==="performRetryPhrase"){
@@ -1267,6 +1286,7 @@ function _renderInner(){
   else if(S.screen===SCR.GUIDED_DONE)content=guidedDonePage();
   else if(S.screen===SCR.PERFORM)content=performPage();
   else if(S.screen===SCR.PERFORM_DONE)content=performDonePage();
+  else if(S.screen===SCR.PERFORM_SONG)content=performSongPage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';

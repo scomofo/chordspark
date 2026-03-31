@@ -193,12 +193,13 @@ function maybeScorePendingEvents(nowSec) {
   var snapshot = PerformanceInput.getSnapshot(nowSec);
   S.performInputSource = PerformanceInput.activeMode;
   S.performInputNotes = snapshot.pitchClasses.slice();
+  var offsetMs = S.performMode === "midi" ? (S.performMidiOffsetMs || 0) : (S.performAudioOffsetMs || 0);
 
   for (var i = 0; i < chart.events.length; i++) {
     var evt = chart.events[i];
     if (evt._scored) continue;
 
-    var deltaMs = (nowSec - evt.t) * 1000;
+    var deltaMs = (nowSec - evt.t) * 1000 - offsetMs;
 
     if (deltaMs < -S.performWindowMissMs) continue;
 

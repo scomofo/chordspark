@@ -1,5 +1,81 @@
 /* ===== ChordSpark: Perform Page ===== */
 
+var _calibTaps = [];
+var _calibInterval = null;
+var _calibBeat = 0;
+
+function startCalibration() {
+  _calibTaps = [];
+  _calibBeat = 0;
+  var bpm = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.latency.calibrationBpm : 100;
+  var beatMs = 60000 / bpm;
+  var totalBeats = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.latency.calibrationTaps : 8;
+
+  S._calibrating = true;
+  S._calibBeatMs = beatMs;
+  S._calibTotalBeats = totalBeats;
+  S._calibCurrentBeat = 0;
+  S._calibExpectedTime = Date.now() + beatMs;
+
+  // Play metronome clicks
+  _calibInterval = setInterval(function() {
+    _calibBeat++;
+    S._calibCurrentBeat = _calibBeat;
+    if (S.soundOn && typeof metroClick === "function") metroClick(_calibBeat === 1);
+    S._calibExpectedTime = Date.now() + beatMs;
+    render();
+    if (_calibBeat >= totalBeats) {
+      clearInterval(_calibInterval);
+      _calibInterval = null;
+      finishCalibration();
+    }
+  }, beatMs);
+
+  render();
+}
+
+function recordCalibrationTap() {
+  if (!S._calibrating) return;
+  var expected = S._calibExpectedTime - S._calibBeatMs;
+  var actual = Date.now();
+  var offset = actual - expected;
+  _calibTaps.push(offset);
+  render();
+}
+
+function finishCalibration() {
+  S._calibrating = false;
+  if (_calibTaps.length < 3) {
+    render();
+    return;
+  }
+  // Remove outliers (first tap and any > 2 stddev)
+  _calibTaps.shift(); // first tap is usually late
+  var sum = 0;
+  for (var i = 0; i < _calibTaps.length; i++) sum += _calibTaps[i];
+  var avg = sum / _calibTaps.length;
+
+  // Clamp to valid range
+  var maxOff = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.latency.maxOffsetMs : 200;
+  var minOff = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.latency.minOffsetMs : -200;
+  avg = Math.max(minOff, Math.min(maxOff, Math.round(avg)));
+
+  if (S.performMode === "midi") {
+    S.performMidiOffsetMs = avg;
+  } else {
+    S.performAudioOffsetMs = avg;
+  }
+  S.performCalibrated = true;
+  saveState();
+  render();
+}
+
+function cancelCalibration() {
+  S._calibrating = false;
+  if (_calibInterval) { clearInterval(_calibInterval); _calibInterval = null; }
+  render();
+}
+
 function performPage() {
   var chart = S.performChart;
   if (!chart) return '<div class="perform-page text-center"><p>No chart loaded.</p><button class="btn" onclick="act(\'back\')">Back</button></div>';
@@ -128,7 +204,26 @@ function performPage() {
     h += '<button class="btn btn-sm perform-ctrl-btn" onclick="act(\'performLoopPhrase\')" style="background:#4ECDC4;color:#fff">&#128257; Loop Phrase</button>';
   }
 
+  // Calibration
+  h += '<button class="btn btn-sm perform-ctrl-btn" onclick="act(\'performCalibrate\')" style="background:var(--input-bg);color:var(--text-secondary)">&#9201; Calibrate</button>';
+  var curOffset = S.performMode === "midi" ? S.performMidiOffsetMs : S.performAudioOffsetMs;
+  if (curOffset !== 0) {
+    h += '<span style="font-size:10px;color:var(--text-muted);margin-left:4px">offset: ' + curOffset + 'ms</span>';
+  }
+
   h += '</div>'; // .perform-controls
+
+  // Calibration section
+  if (S._calibrating) {
+    h += '<div class="card" style="margin:8px 12px;text-align:center">';
+    h += '<div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:8px">Calibrating...</div>';
+    h += '<div style="font-size:48px;font-weight:900;color:#FFE66D;animation:bn .3s ease">' + (S._calibCurrentBeat || 0) + '/' + (S._calibTotalBeats || 8) + '</div>';
+    h += '<p style="font-size:12px;color:var(--text-muted)">Tap spacebar or click when you hear the beat</p>';
+    h += '<button class="btn" onclick="recordCalibrationTap()" style="background:#4ECDC4;color:#fff;padding:16px 32px;font-size:16px">TAP</button>';
+    h += ' <button class="btn btn-sm" onclick="cancelCalibration()" style="margin-left:8px">Cancel</button>';
+    h += '</div>';
+  }
+
   h += '</div>'; // .perform-page
   return h;
 }

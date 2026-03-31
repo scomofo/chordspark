@@ -16,6 +16,14 @@
     ui: {
       hitBadgeMs: 800,
       debugDefault: false
+    },
+    latency: {
+      defaultMidiOffsetMs: 0,
+      defaultAudioOffsetMs: 0,
+      maxOffsetMs: 200,
+      minOffsetMs: -200,
+      calibrationTaps: 8,
+      calibrationBpm: 100
     }
   };
 

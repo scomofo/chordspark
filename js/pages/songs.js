@@ -100,8 +100,7 @@ function songsTab(){
       h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+escHTML(s.chords[j])+'</span>';
     h+='</div>';
     if(s.progression&&s.progression.length>0&&!lk){
-      h+='<div style="margin-top:6px"><button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSong\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:11px;padding:4px 10px">&#127918; Perform</button>';
-      h+='<button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSongRhythm\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#45B7D1,#4ECDC4);color:#fff;font-size:11px;padding:4px 10px;margin-left:4px">&#127925; Rhythm</button></div>';
+      h+='<div style="margin-top:6px"><button class="btn btn-sm" onclick="event.stopPropagation();act(\'openPerformSong\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:11px;padding:4px 10px">&#127918; Perform</button></div>';
     }
     h+='</div>';
   }

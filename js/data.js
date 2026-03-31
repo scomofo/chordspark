@@ -4,7 +4,8 @@ var SCR={
   DRILL:"drill",DRILL_DONE:"drillDone",DAILY:"daily",
   QUIZ:"quiz",STRUM:"strumDetail",SONG:"songDetail",
   SONG_DONE:"songDone",STEMS:"stems",GUIDED:"guided",GUIDED_DONE:"guidedDone",
-  PERFORM:"perform",PERFORM_DONE:"performDone"
+  PERFORM:"perform",PERFORM_DONE:"performDone",
+  PERFORM_SONG:"performSong"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",
