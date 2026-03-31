@@ -30,14 +30,24 @@ function startPerformanceCountIn(chart, speed, onDone) {
   setTimeout(tick, beatMs);
 }
 
-function startPerformance(chartId, opts) {
+function startPerformance(chartIdOrChart, opts) {
   opts = opts || {};
   _performStopping = false;
   stopAllTimers();
 
-  loadPerformanceChart(chartId).then(function(chart) {
+  var chartPromise;
+  if (typeof chartIdOrChart === "string") {
+    chartPromise = loadPerformanceChart(chartIdOrChart);
+  } else if (chartIdOrChart && chartIdOrChart.events) {
+    chartPromise = Promise.resolve(normalizePerformanceChart(chartIdOrChart));
+  } else {
+    console.error("ChordSpark: invalid chart argument");
+    return;
+  }
+
+  chartPromise.then(function(chart) {
     S.performChart = chart;
-    S.performChartId = chartId;
+    S.performChartId = typeof chartIdOrChart === "string" ? chartIdOrChart : (chart.id || "generated");
     S.performPlaying = true;
     S.performPaused = false;
     S.performCurrentSec = 0;
@@ -290,6 +300,29 @@ function finishPerformance() {
   S.xp += xpAward;
   S.xpToast = { amount: xpAward, time: Date.now() };
   logHistory("perform", S.performResults.title + " - " + S.performResults.accuracy + "% accuracy", xpAward);
+
+  // Persist song stats
+  var songKey = S.performChartId || "unknown";
+  if (!S.performSongStats[songKey]) {
+    S.performSongStats[songKey] = { bestScore: 0, bestAccuracy: 0, bestStars: 0, runs: 0, phrases: {} };
+  }
+  var ss = S.performSongStats[songKey];
+  ss.runs++;
+  if (S.performResults.score > ss.bestScore) ss.bestScore = S.performResults.score;
+  if (S.performResults.accuracy > ss.bestAccuracy) ss.bestAccuracy = S.performResults.accuracy;
+  if (S.performResults.stars > ss.bestStars) ss.bestStars = S.performResults.stars;
+
+  // Per-phrase bests
+  if (S.performResults.phraseStats) {
+    for (var pi = 0; pi < S.performResults.phraseStats.length; pi++) {
+      var ps = S.performResults.phraseStats[pi];
+      var pk = String(ps.phraseId);
+      if (!ss.phrases[pk]) ss.phrases[pk] = { bestScore: 0, attempts: 0 };
+      ss.phrases[pk].attempts++;
+      var avg = ps.total > 0 ? ps.scoreSum / ps.total : 0;
+      if (avg > ss.phrases[pk].bestScore) ss.phrases[pk].bestScore = avg;
+    }
+  }
 
   saveState();
   S.screen = SCR.PERFORM_DONE;

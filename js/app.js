@@ -1116,6 +1116,14 @@ window.act=function(a,v){
   // === Performance Mode ===
   if(a==="openPerform"){startPerformance(v);return;}
   if(a==="startPerform"){startPerformance(v);return;}
+  if(a==="performSong"){
+    var songIdx=parseInt(v);
+    if(!isNaN(songIdx)&&SONGS[songIdx]){
+      var chart=buildPerformanceChartFromSong(SONGS[songIdx],"builtin");
+      if(chart){startPerformance(chart);return;}
+    }
+    return;
+  }
   if(a==="pausePerform"){pausePerformance();return;}
   if(a==="resumePerform"){resumePerformance();return;}
   if(a==="stopPerform"){stopPerformance();S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
@@ -1133,6 +1141,34 @@ window.act=function(a,v){
   if(a==="performPracticePreset"){applyPerformanceStemPreset(v);render();return;}
   if(a==="performRetry"){startPerformance(S.performChartId);return;}
   if(a==="performDebug"){S.performDebug=!S.performDebug;render();return;}
+  if(a==="performRetryPhrase"){
+    if(S.performChart&&S.performResults&&S.performResults.phraseStats){
+      var weakIdx=0,weakAvg=Infinity;
+      for(var wi=0;wi<S.performResults.phraseStats.length;wi++){
+        var wp=S.performResults.phraseStats[wi];
+        var wa=wp.total>0?wp.scoreSum/wp.total:0;
+        if(wa<weakAvg){weakAvg=wa;weakIdx=wi;}
+      }
+      var weakPhrase=S.performChart.phrases[weakIdx];
+      if(weakPhrase){
+        S.performTargetPhrase=weakIdx;
+        startPerformance(S.performChartId||S.performChart,{
+          mode:S.performMode,
+          difficulty:S.performDifficulty,
+          speed:S.performSpeed
+        });
+        // Set loop after start (chart needs to load first) - use setTimeout to let it resolve
+        setTimeout(function(){
+          if(S.performChart&&S.performChart.phrases[weakIdx]){
+            var ph=S.performChart.phrases[weakIdx];
+            setPerformanceLoop({startSec:ph.startSec,endSec:ph.endSec,phraseId:ph.id});
+            render();
+          }
+        },100);
+      }
+    }
+    return;
+  }
   // === Back ===
   if(a==="back"){
     stopAllTimers();

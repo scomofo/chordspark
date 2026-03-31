@@ -91,7 +91,11 @@ function songsTab(){
     h+='<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">';
     for(var j=0;j<s.chords.length;j++)
       h+='<span style="background:var(--chip-bg);padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:var(--chip-color)">'+escHTML(s.chords[j])+'</span>';
-    h+='</div></div>';
+    h+='</div>';
+    if(s.progression&&s.progression.length>0&&!lk){
+      h+='<div style="margin-top:6px"><button class="btn btn-sm" onclick="event.stopPropagation();act(\'performSong\','+SONGS.indexOf(s)+')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;font-size:11px;padding:4px 10px">&#127918; Perform</button></div>';
+    }
+    h+='</div>';
   }
   if(filtered.length===0)h+='<div class="card text-center"><p style="color:var(--text-muted);font-size:13px">No songs match your search.</p></div>';
   h+='</div>';

@@ -149,6 +149,13 @@ function performDonePage() {
   }
   h += '</div>';
 
+  // Previous best
+  var songKey = S.performChartId || "unknown";
+  var prevBest = S.performSongStats[songKey];
+  if (prevBest && prevBest.runs > 1) {
+    h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Previous best: ' + prevBest.bestScore + ' pts / ' + prevBest.bestAccuracy + '% / ' + prevBest.bestStars + ' stars (' + prevBest.runs + ' runs)</div>';
+  }
+
   // Summary stats
   h += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">' + (r.totalEvents || 0) + ' events &mdash; ' + ((r.totalEvents || 0) - (r.accuracy ? Math.round(r.accuracy * (r.totalEvents || 0) / 100) : 0)) + ' missed</div>';
 
@@ -192,6 +199,7 @@ function performDonePage() {
   // Buttons
   h += '<div class="flex-col">';
   h += '<button class="btn" onclick="act(\'performRetry\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff">&#128257; Retry</button>';
+  h += '<button class="btn" onclick="act(\'performRetryPhrase\')" style="background:linear-gradient(135deg,#FF6B6B,#FFE66D);color:#333">&#128170; Retry Weakest</button>';
   h += '<button class="btn" onclick="act(\'tab\',\'songs\')" style="background:#4ECDC4;color:#fff">&#127968; Songs</button>';
   h += '</div>';
   h += '</div>';
