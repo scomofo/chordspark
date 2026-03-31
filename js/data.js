@@ -7,7 +7,8 @@ var SCR={
   PERFORM:"perform",PERFORM_DONE:"performDone",
   PERFORM_SONG:"performSong",
   PERF_STATS:"perfStats",
-  PERF_EDITOR:"perfEditor"
+  PERF_EDITOR:"perfEditor",
+  SKILL_TREE:"skillTree"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",

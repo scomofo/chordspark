@@ -1143,6 +1143,8 @@ window.act=function(a,v){
   }
   if(a==="openPerfStats"){S.screen=SCR.PERF_STATS;render();return;}
   if(a==="openEditor"){S.performEditorChart=null;S.performEditorDirty=false;S.screen=SCR.PERF_EDITOR;render();return;}
+  if(a==="openSkillTree"){S.screen=SCR.SKILL_TREE;render();return;}
+  if(a==="skillTreeFocus"){S.skillTreeFocus=v||"overview";render();return;}
   if(a==="editorBack"){S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
   if(a==="editorMode"){S.performEditorMode=v;render();return;}
   if(a==="editorSnap"){S.performEditorSnap=v;render();return;}
@@ -1415,6 +1417,7 @@ function _renderInner(){
   else if(S.screen===SCR.PERFORM_SONG)content=performSongPage();
   else if(S.screen===SCR.PERF_STATS)content=performanceStatsPage();
   else if(S.screen===SCR.PERF_EDITOR)content=performanceEditorPage();
+  else if(S.screen===SCR.SKILL_TREE)content=skillTreePage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';

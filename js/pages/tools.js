@@ -76,6 +76,7 @@ function statsTab(){
   var dayCount=Object.keys(practiceDays).length;
   var avgXP=dayCount>0?Math.round(totalXP/dayCount):0;
 
+  h+='<div style="text-align:center;margin-bottom:12px"><button class="btn" onclick="act(\'openSkillTree\')" style="background:var(--accent);color:#fff">&#127795; Skill Tree</button></div>';
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">';
   h+='<div class="stat-card"><div style="font-size:28px;font-weight:900;color:#FF6B6B">'+S.xp+'</div><div style="font-size:11px;color:var(--text-muted);font-weight:600">Total XP</div></div>';
   h+='<div class="stat-card"><div style="font-size:28px;font-weight:900;color:#4ECDC4">'+totalSessions+'</div><div style="font-size:11px;color:var(--text-muted);font-weight:600">Activities</div></div>';

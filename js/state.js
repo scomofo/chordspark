@@ -134,6 +134,10 @@ var S={
   performEditorSnap:"1/4",
   performEditorPlayheadSec:0,
   performEditorLibrary:[],
+
+  // Skill tree
+  skillTreeFocus:"overview",
+  skillTreeSelectedNode:null,
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
