@@ -122,6 +122,18 @@ var S={
   performMidiOffsetMs:0,
   performAudioOffsetMs:0,
   performCalibrated:false,
+  practicePlan:null,
+  practicePlanDate:null,
+  practicePlanComplete:false,
+  practicePlanHistory:[],
+  performEditorChart:null,
+  performEditorDirty:false,
+  performEditorSelectedEventId:null,
+  performEditorMode:"chords",
+  performEditorSongId:null,
+  performEditorSnap:"1/4",
+  performEditorPlayheadSec:0,
+  performEditorLibrary:[],
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -141,7 +153,9 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "performPracticeMode","performSongStats","performArrangementType",
   "performanceStats","performanceUnlocks",
   "performMidiOffsetMs","performAudioOffsetMs","performCalibrated",
-  "performanceDailyHistory"];
+  "performanceDailyHistory",
+  "practicePlanDate","practicePlanHistory",
+  "performEditorLibrary"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;

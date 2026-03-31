@@ -1142,6 +1142,114 @@ window.act=function(a,v){
     return;
   }
   if(a==="openPerfStats"){S.screen=SCR.PERF_STATS;render();return;}
+  if(a==="openEditor"){S.performEditorChart=null;S.performEditorDirty=false;S.screen=SCR.PERF_EDITOR;render();return;}
+  if(a==="editorBack"){S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
+  if(a==="editorMode"){S.performEditorMode=v;render();return;}
+  if(a==="editorSnap"){S.performEditorSnap=v;render();return;}
+  if(a==="editorNew"){
+    S.performEditorChart={id:"custom_"+Date.now(),title:"New Chart",artist:"Custom",bpm:90,beatsPerBar:4,arrangementType:S.performEditorMode,events:[],phrases:[{id:0,name:"Phrase 1",startSec:0,endSec:8}]};
+    S.performEditorDirty=true;render();return;
+  }
+  if(a==="editorFromSong"){
+    if(S.performSongData){
+      var chart=buildPerformanceChartFromSong(S.performSongData,"builtin",S.performEditorMode);
+      if(chart){S.performEditorChart=chart;S.performEditorDirty=true;render();}
+    }
+    return;
+  }
+  if(a==="editorTitle"){if(S.performEditorChart){S.performEditorChart.title=v;S.performEditorDirty=true;render();}return;}
+  if(a==="editorBpm"){if(S.performEditorChart){S.performEditorChart.bpm=parseInt(v)||90;S.performEditorDirty=true;render();}return;}
+  if(a==="editorSelectEvent"){S.performEditorSelectedEventId=parseInt(v);render();return;}
+  if(a==="editorAddEvent"){
+    if(S.performEditorChart){
+      var evts=S.performEditorChart.events;
+      var maxId=0;for(var ei=0;ei<evts.length;ei++)if(evts[ei].id>maxId)maxId=evts[ei].id;
+      var lastT=evts.length?evts[evts.length-1].t+evts[evts.length-1].dur:0;
+      var beatDur=60/(S.performEditorChart.bpm||90);
+      evts.push({id:maxId+1,t:lastT,dur:beatDur,type:S.performEditorMode==="lead"?"note":"chord",chord:"",laneLabel:"?",notes:[],strum:"down"});
+      S.performEditorDirty=true;render();
+    }
+    return;
+  }
+  if(a==="editorDeleteEvent"){
+    if(S.performEditorChart){
+      S.performEditorChart.events=S.performEditorChart.events.filter(function(e){return e.id!==parseInt(v);});
+      if(S.performEditorSelectedEventId===parseInt(v))S.performEditorSelectedEventId=null;
+      S.performEditorDirty=true;render();
+    }
+    return;
+  }
+  if(a==="editorEvt"){
+    try{
+      var p=JSON.parse(v);
+      if(S.performEditorChart){
+        for(var ee=0;ee<S.performEditorChart.events.length;ee++){
+          if(S.performEditorChart.events[ee].id===p.id){
+            if(p.prop==="label"){S.performEditorChart.events[ee].laneLabel=p.val;S.performEditorChart.events[ee].chord=p.val;}
+            if(p.prop==="t")S.performEditorChart.events[ee].t=parseFloat(p.val)||0;
+            if(p.prop==="dur")S.performEditorChart.events[ee].dur=parseFloat(p.val)||0;
+            break;
+          }
+        }
+        S.performEditorDirty=true;render();
+      }
+    }catch(e){}
+    return;
+  }
+  if(a==="editorAddPhrase"){
+    if(S.performEditorChart){
+      var ph=S.performEditorChart.phrases;
+      var lastEnd=ph.length?ph[ph.length-1].endSec:0;
+      ph.push({id:ph.length,name:"Phrase "+(ph.length+1),startSec:lastEnd,endSec:lastEnd+8});
+      S.performEditorDirty=true;render();
+    }
+    return;
+  }
+  if(a==="editorSave"){
+    if(S.performEditorChart){
+      if(!Array.isArray(S.performEditorLibrary))S.performEditorLibrary=[];
+      var exists=-1;
+      for(var si=0;si<S.performEditorLibrary.length;si++){
+        if(S.performEditorLibrary[si].id===S.performEditorChart.id){exists=si;break;}
+      }
+      var copy=JSON.parse(JSON.stringify(S.performEditorChart));
+      if(exists>=0)S.performEditorLibrary[exists]=copy;
+      else S.performEditorLibrary.push(copy);
+      S.performEditorDirty=false;saveState();render();
+    }
+    return;
+  }
+  if(a==="editorLoad"){
+    var idx=parseInt(v);
+    if(S.performEditorLibrary&&S.performEditorLibrary[idx]){
+      S.performEditorChart=JSON.parse(JSON.stringify(S.performEditorLibrary[idx]));
+      S.performEditorDirty=false;S.performEditorSelectedEventId=null;render();
+    }
+    return;
+  }
+  if(a==="editorDelete"){
+    var di=parseInt(v);
+    if(S.performEditorLibrary&&S.performEditorLibrary[di]){
+      S.performEditorLibrary.splice(di,1);saveState();render();
+    }
+    return;
+  }
+  if(a==="editorExport"){
+    if(S.performEditorChart){
+      var json=JSON.stringify(S.performEditorChart,null,2);
+      var blob=new Blob([json],{type:"application/json"});
+      var url=URL.createObjectURL(blob);
+      var a2=document.createElement("a");a2.href=url;a2.download=(S.performEditorChart.title||"chart").replace(/\s+/g,"_")+".json";
+      document.body.appendChild(a2);a2.click();document.body.removeChild(a2);URL.revokeObjectURL(url);
+    }
+    return;
+  }
+  if(a==="editorPreview"){
+    if(S.performEditorChart&&S.performEditorChart.events&&S.performEditorChart.events.length){
+      startPerformance(S.performEditorChart);
+    }
+    return;
+  }
   if(a==="openPerformanceDaily"){
     var ch=choosePerformanceDailyChallenge();
     if(!ch){render();return;}
@@ -1213,6 +1321,7 @@ window.act=function(a,v){
     }
     return;
   }
+  if(a==="completePlanItem"){if(typeof markPracticePlanItem==="function")markPracticePlanItem(v);render();return;}
   // === Back ===
   if(a==="back"){
     stopAllTimers();
@@ -1305,6 +1414,7 @@ function _renderInner(){
   else if(S.screen===SCR.PERFORM_DONE)content=performDonePage();
   else if(S.screen===SCR.PERFORM_SONG)content=performSongPage();
   else if(S.screen===SCR.PERF_STATS)content=performanceStatsPage();
+  else if(S.screen===SCR.PERF_EDITOR)content=performanceEditorPage();
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';
@@ -1415,6 +1525,7 @@ document.addEventListener("keydown",function(e){
 
 // ===== INITIALIZATION =====
 S.dailyChallenge=DAILY_CHALLENGES[Math.floor(Date.now()/86400000)%DAILY_CHALLENGES.length];
+try{if(typeof generatePracticePlan==="function")generatePracticePlan();}catch(e){}
 applyTheme();
 // Init MIDI if previously enabled
 if(S.midiEnabled){try{initMIDI();}catch(e){console.error("ChordSpark: MIDI init failed",e);}}
