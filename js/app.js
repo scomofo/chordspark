@@ -307,7 +307,7 @@ function stopAllTimers(){
   if(S.progPlaying){S.progPlaying=false;}
   cleanupStems();S.stemPlaying=false;
   S.timerActive=false;S.strumActive=false;S.songPlaying=false;
-  if(S.performPlaying||S.performPaused){stopPerformance();}
+  if(!_performStopping&&(S.performPlaying||S.performPaused)){stopPerformance();}
 }
 
 // ===== ACTION DISPATCHER =====

@@ -1,9 +1,11 @@
 /* ===== ChordSpark Performance: Session Orchestrator ===== */
 
 var _performRAF = null;
+var _performStopping = false;
 
 function startPerformance(chartId, opts) {
   opts = opts || {};
+  _performStopping = false;
   stopAllTimers();
 
   loadPerformanceChart(chartId).then(function(chart) {
@@ -49,11 +51,26 @@ function startPerformance(chartId, opts) {
 }
 
 function stopPerformance() {
-  PerformanceTransport.stop();
-  PerformanceInput.stop();
+  _performStopping = true;
+  if (_performRAF) { cancelAnimationFrame(_performRAF); _performRAF = null; }
+  try { PerformanceTransport.stop(); } catch(e) {}
+  try { PerformanceInput.stop(); } catch(e) {}
   S.performPlaying = false;
   S.performPaused = false;
-  if (_performRAF) { cancelAnimationFrame(_performRAF); _performRAF = null; }
+}
+
+function resetPerformanceEvents(chart, rangeStartSec, rangeEndSec) {
+  if (!chart || !Array.isArray(chart.events)) return;
+  var useRange = typeof rangeStartSec === "number" && typeof rangeEndSec === "number";
+  for (var i = 0; i < chart.events.length; i++) {
+    var evt = chart.events[i];
+    if (useRange && (evt.t < rangeStartSec || evt.t >= rangeEndSec)) continue;
+    evt._hit = false;
+    evt._miss = false;
+    evt._scored = false;
+    evt._result = null;
+    evt._score = 0;
+  }
 }
 
 function pausePerformance() {
@@ -89,7 +106,7 @@ function clearPerformanceLoop() {
 }
 
 function updatePerformanceFrame() {
-  if (!S.performPlaying || S.performPaused) return;
+  if (_performStopping || !S.performPlaying || S.performPaused) return;
 
   var nowSec = PerformanceTransport.now();
   S.performCurrentSec = nowSec;
@@ -100,17 +117,7 @@ function updatePerformanceFrame() {
   // Loop enforcement
   if (S.performLoop && nowSec >= S.performLoop.endSec) {
     PerformanceTransport.seek(S.performLoop.startSec);
-    var events = S.performChart.events;
-    for (var i = 0; i < events.length; i++) {
-      var e = events[i];
-      if (e.t >= S.performLoop.startSec && e.t < S.performLoop.endSec) {
-        e._hit = false;
-        e._miss = false;
-        e._scored = false;
-        e._result = null;
-        e._score = 0;
-      }
-    }
+    resetPerformanceEvents(S.performChart, S.performLoop.startSec, S.performLoop.endSec);
     render();
     _performRAF = requestAnimationFrame(updatePerformanceFrame);
     return;
@@ -131,6 +138,8 @@ function maybeScorePendingEvents(nowSec) {
   var chart = S.performChart;
   if (!chart) return;
   var snapshot = PerformanceInput.getSnapshot(nowSec);
+  S.performInputSource = PerformanceInput.activeMode;
+  S.performInputNotes = snapshot.pitchClasses.slice();
 
   for (var i = 0; i < chart.events.length; i++) {
     var evt = chart.events[i];

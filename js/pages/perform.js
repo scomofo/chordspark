@@ -35,8 +35,15 @@ function performPage() {
   // Highway
   h += renderPerformanceHighway(chart, nowSec);
 
-  // Input source badge
-  h += '<div class="perform-input-badge">' + (S.performInputSource === "midi" ? "MIDI" : "MIC") + '</div>';
+  // Input source badge + detected notes
+  h += '<div class="perform-input-badge">' + (S.performInputSource === "midi" ? "MIDI" : "MIC");
+  if (S.performInputNotes && S.performInputNotes.length) {
+    h += ' &mdash; ';
+    for (var ni = 0; ni < S.performInputNotes.length; ni++) {
+      h += '<span style="background:var(--chip-bg);color:var(--chip-color);padding:2px 6px;border-radius:6px;margin-left:3px;font-size:11px;font-weight:700">' + escHTML(S.performInputNotes[ni]) + '</span>';
+    }
+  }
+  h += '</div>';
 
   // Controls
   h += '<div class="perform-controls">';

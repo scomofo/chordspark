@@ -439,6 +439,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .perform-toggle-group .btn-sm { font-size:11px; padding:4px 8px; border-radius:8px; background:var(--input-bg); color:var(--text-secondary); border:1px solid var(--border); }
 .perform-toggle-group .btn-sm.active { background:linear-gradient(135deg,#4ECDC4,#45B7D1); color:#fff; border-color:#4ECDC4; }
 
+@media(max-width:640px){
+  .perform-score-strip { gap:4px; padding:6px 8px; }
+  .perform-stat-val { font-size:15px; }
+  .perform-controls { gap:5px; padding:8px; }
+  .perform-toggle-group { flex-wrap:wrap; }
+  .perform-highway { min-height:260px; }
+}
+
 /* ===== Responsive ===== */
 @media(min-width:600px){
   body{max-width:600px;margin:0 auto}
