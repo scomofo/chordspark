@@ -6,7 +6,8 @@ var SCR={
   SONG_DONE:"songDone",STEMS:"stems",GUIDED:"guided",GUIDED_DONE:"guidedDone",
   PERFORM:"perform",PERFORM_DONE:"performDone",
   PERFORM_SONG:"performSong",
-  PERF_STATS:"perfStats"
+  PERF_STATS:"perfStats",
+  PERF_EDITOR:"perfEditor"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",
