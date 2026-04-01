@@ -186,14 +186,9 @@ function saveState(immediate){
 }
 function _doSave(){
   try{
-    var data={};
-    for(var i=0;i<PERSIST_FIELDS.length;i++){
-      data[PERSIST_FIELDS[i]]=S[PERSIST_FIELDS[i]];
-    }
+    var data=buildPersistedStateSnapshot(S,PERSIST_FIELDS);
     // Cap history at 500 entries
-    if(data.history&&data.history.length>500){
-      data.history=data.history.slice(data.history.length-500);
-    }
+    if(data.history) data.history=capArray(data.history,500);
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
   }catch(e){console.error("ChordSpark: saveState failed",e);}
 }
@@ -202,12 +197,9 @@ function loadState(){
   try{
     var raw=localStorage.getItem(SAVE_KEY);
     if(!raw)return;
-    var data=JSON.parse(raw);
-    for(var i=0;i<PERSIST_FIELDS.length;i++){
-      if(data[PERSIST_FIELDS[i]]!==undefined){
-        S[PERSIST_FIELDS[i]]=data[PERSIST_FIELDS[i]];
-      }
-    }
+    var data=safeJsonParse(raw,null);
+    if(!data)return;
+    applyPersistedStateSnapshot(S,data,PERSIST_FIELDS);
     // Ensure arrays
     if(!Array.isArray(S.history))S.history=[];
     if(!Array.isArray(S.customSets))S.customSets=[];
@@ -218,11 +210,7 @@ function loadState(){
 
 function resetProgress(){
   // Save backup for undo — keep old data in localStorage until undo expires
-  _undoBackup={};
-  for(var i=0;i<PERSIST_FIELDS.length;i++){
-    var val=S[PERSIST_FIELDS[i]];
-    _undoBackup[PERSIST_FIELDS[i]]=JSON.parse(JSON.stringify(val));
-  }
+  _undoBackup=JSON.parse(JSON.stringify(buildPersistedStateSnapshot(S,PERSIST_FIELDS)));
   _undoBackup._backupTime=Date.now();
   try{localStorage.setItem(SAVE_KEY+"_backup",JSON.stringify(_undoBackup));}catch(e){console.error("ChordSpark: undo backup save failed",e);}
   // Clear state in memory (localStorage cleared only when undo timer expires)
@@ -240,7 +228,7 @@ function resetProgress(){
     if(S.undoTimer<=0){
       clearInterval(T.undo);T.undo=null;
       S.showUndoToast=false;_undoBackup=null;
-      try{localStorage.removeItem(SAVE_KEY+"_backup");}catch(e){}
+      removePersistedBackup(SAVE_KEY+"_backup");
       saveState();
     }
     render();
@@ -255,25 +243,24 @@ function undoReset(){
   }
   _undoBackup=null;
   S.showUndoToast=false;
-  try{localStorage.removeItem(SAVE_KEY+"_backup");}catch(e){}
+  removePersistedBackup(SAVE_KEY+"_backup");
   saveState(true);render();
 }
 
 // Recover from crash during reset undo window
 function recoverFromCrash(){
   try{
-    var backup=localStorage.getItem(SAVE_KEY+"_backup");
-    if(backup){
-      var data=JSON.parse(backup);
+    var raw=localStorage.getItem(SAVE_KEY+"_backup");
+    if(raw){
+      var data=safeJsonParse(raw,null);
+      if(!data){removePersistedBackup(SAVE_KEY+"_backup");return;}
       // Only restore if backup has a valid timestamp and is less than 1 hour old
       if(!data._backupTime||Date.now()-data._backupTime>3600000){
-        localStorage.removeItem(SAVE_KEY+"_backup");
+        removePersistedBackup(SAVE_KEY+"_backup");
         return;
       }
-      for(var i=0;i<PERSIST_FIELDS.length;i++){
-        if(data[PERSIST_FIELDS[i]]!==undefined)S[PERSIST_FIELDS[i]]=data[PERSIST_FIELDS[i]];
-      }
-      localStorage.removeItem(SAVE_KEY+"_backup");
+      applyPersistedStateSnapshot(S,data,PERSIST_FIELDS);
+      removePersistedBackup(SAVE_KEY+"_backup");
       saveState(true);
     }
   }catch(e){console.error("ChordSpark: recoverFromCrash failed",e);}
