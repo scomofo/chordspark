@@ -1513,11 +1513,14 @@ document.addEventListener("keydown",function(e){
   if(S.screen===SCR.PERFORM||S.screen===SCR.PERFORM_DONE){
     if(key==="l"||key==="L"){act("performLoopPhrase");return;}
     if(key==="c"||key==="C"){act("performClearLoop");return;}
+    if(key==="r"||key==="R"){act("performRetry");return;}
     if(key==="1"){act("performSpeed",0.5);return;}
     if(key==="2"){act("performSpeed",0.75);return;}
     if(key==="3"){act("performSpeed",1);return;}
+    if(key==="4"){act("performSpeed",1.25);return;}
     if(key==="m"||key==="M"){act("performMode","midi");return;}
     if(key==="n"||key==="N"){act("performMode","mic");return;}
+    if(key==="p"||key==="P"){act("performRetryPhrase");return;}
     if(key==="Escape"){act("stopPerform");return;}
     if(key==="d"||key==="D"){act("performDebug");return;}
   }
