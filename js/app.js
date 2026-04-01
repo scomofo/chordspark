@@ -1146,6 +1146,24 @@ window.act=function(a,v){
   if(a==="openSkillTree"){S.screen=SCR.SKILL_TREE;render();return;}
   if(a==="skillTreeFocus"){S.skillTreeFocus=v||"overview";render();return;}
   if(a==="openPlan"){S.screen=SCR.PLAN;render();return;}
+  if(a==="openPerformCalibration"){S.screen=SCR.PERFORM_CALIBRATE;render();return;}
+  if(a==="performCalibrateSource"){S.performCalibrationSource=v||"midi";render();return;}
+  if(a==="performCalibrationStart"){startPerformanceCalibrationRun();render();return;}
+  if(a==="performCalibrationStop"){stopPerformanceCalibration();render();return;}
+  if(a==="performCalibrationApply"){applyCalibrationOffset();render();return;}
+  if(a==="performCalibrationReset"){
+    if(S.performCalibrationSource==="midi")S.performMidiOffsetMs=0;
+    if(S.performCalibrationSource==="mic")S.performMicOffsetMs=0;
+    S.performCalibrationHits=[];saveState();render();return;
+  }
+  if(a==="performCalibrateTap"){
+    var nowMs=performance.now();
+    var beatIdx=typeof getCalibrationBeatIndex==="function"?getCalibrationBeatIndex():0;
+    var startMs=typeof getCalibrationStartMs==="function"?getCalibrationStartMs():0;
+    var interval=typeof getCalibrationBeatIntervalMs==="function"?getCalibrationBeatIntervalMs():1000;
+    var targetMs=startMs+(beatIdx*interval);
+    recordCalibrationHit(targetMs,nowMs);render();return;
+  }
   if(a==="completePlan"){completePracticePlan();render();return;}
   if(a==="regeneratePlan"){buildPracticePlan();render();return;}
   if(a==="editorBack"){S.screen=SCR.HOME;S.tab=TAB.SONGS;render();return;}
@@ -1421,6 +1439,7 @@ function _renderInner(){
   else if(S.screen===SCR.PERF_STATS)content=performanceStatsPage();
   else if(S.screen===SCR.PERF_EDITOR)content=performanceEditorPage();
   else if(S.screen===SCR.SKILL_TREE)content=skillTreePage();
+  else if(S.screen===SCR.PERFORM_CALIBRATE)content=performCalibrationPage();
   else if(S.screen===SCR.PLAN)content=planPage();
 
   if(screenKey!==_lastScreen){

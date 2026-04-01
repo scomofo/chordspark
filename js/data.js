@@ -9,7 +9,8 @@ var SCR={
   PERF_STATS:"perfStats",
   PERF_EDITOR:"perfEditor",
   SKILL_TREE:"skillTree",
-  PLAN:"practicePlan"
+  PLAN:"practicePlan",
+  PERFORM_CALIBRATE:"perfCalibrate"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",

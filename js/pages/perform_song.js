@@ -88,6 +88,7 @@ function performSongPage() {
   h += '<div class="flex-col" style="gap:8px">';
   h += '<button class="btn" onclick="act(\'performStartFromSong\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;padding:14px;font-size:16px;font-weight:800">&#127918; Start Performance</button>';
   h += '<button class="btn" onclick="act(\'performRetryPhrase\')" style="background:#4ECDC4;color:#fff">&#128170; Practice Weakest Phrase</button>';
+  h += '<button class="btn btn-sm" onclick="act(\'openPerformCalibration\')" style="background:var(--input-bg);color:var(--text-secondary)">&#9881; Calibrate Timing</button>';
   h += '</div>';
 
   h += '</div>';
