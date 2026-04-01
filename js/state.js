@@ -180,6 +180,14 @@ var S={
     exercises:{}
   },
   progressionTree:null,
+
+  // XP / Levels / Achievements
+  playerXP:0,
+  playerLevel:1,
+  playerAchievements:{},
+  playerStats:{songsCompleted:0, lessonsCompleted:0, exercisesCompleted:0, totalPracticeMinutes:0, streakBest:0},
+  xpLog:[],
+  contentLibrary:{rhythmPatterns:[], lhPatterns:[], chordProgressions:[], exercises:[]},
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -204,7 +212,8 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "practicePlan","practicePlanDate","practicePlanHistory",
   "weakSpots","practiceHistory","adaptiveState",
   "weeklyPracticePlan","practiceStreak","totalPracticeMinutes","todayPracticeMinutes",
-  "mastery","unlocks"];
+  "mastery","unlocks",
+  "playerXP","playerLevel","playerAchievements","playerStats","xpLog","contentLibrary"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;
