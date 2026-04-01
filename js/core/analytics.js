@@ -4,7 +4,7 @@
       performances: []
     };
     S.analytics.performances.push(result);
-    saveSparkState();
+    if(typeof saveState === "function") saveState();
   }
 
   function getAverageAccuracy(){

@@ -470,3 +470,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @supports(padding:env(safe-area-inset-top)){
   body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
 }
+
+/* ===== Home Dashboard Grid ===== */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.home-grid-item{min-height:140px}
+.mb16{margin-bottom:16px}
+.muted{color:var(--text-muted,#888)}

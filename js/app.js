@@ -552,6 +552,29 @@ window.act=function(a,v){
   // Onboarding
   if(a==="setIntention"){S.practiceIntention=v||"";return;}
   if(a==="completeOnboarding"){S.onboardingDone=true;saveState();render();return;}
+  // New system screens
+  if(a==="openRecommendations"){S.screen=SCR.RECOMMENDATIONS;render();return;}
+  if(a==="openCareer"){S.screen=SCR.CAREER;render();return;}
+  if(a==="openCareerSong"){
+    if(typeof getContent==="function")S.currentSong=getContent("songs",v);
+    S.screen=SCR.PERFORM_SONG;render();return;
+  }
+  if(a==="openInsights"){S.screen=SCR.INSIGHTS;render();return;}
+  if(a==="openChallengeHub"){S.screen=SCR.CHALLENGES;render();return;}
+  if(a==="openHomeDash"){S.screen=SCR.HOME_DASH;render();return;}
+  if(a==="openSettings"){S.screen=SCR.SETTINGS;render();return;}
+  if(a==="openOnboarding"){if(typeof startOnboarding==="function")startOnboarding();return;}
+  if(a==="resumeOnboarding"){if(typeof continueOnboarding==="function")continueOnboarding();return;}
+  if(a==="refreshHome"){
+    if(typeof generateRecommendations==="function")generateRecommendations();
+    if(typeof generatePersonalInsights==="function")generatePersonalInsights();
+    render();return;
+  }
+  if(a==="launchRecommendation"){if(typeof launchRecommendationById==="function")launchRecommendationById(v);return;}
+  if(a==="claimChallengeReward"){if(typeof claimChallengeReward==="function")claimChallengeReward(v);render();return;}
+  if(a==="initChallenges"){if(typeof initializeChallengesForCurrentCycle==="function")initializeChallengesForCurrentCycle();render();return;}
+  if(a==="openPracticePlan"){S.screen=SCR.PLAN;render();return;}
+  if(a==="setTheme"){if(S.settings)S.settings.theme=v;if(typeof applyThemeSetting==="function")applyThemeSetting();saveState();render();return;}
   // Song sorting
   if(a==="songSort"){
     if(S.songSort===v){S.songSortAsc=!S.songSortAsc;}
@@ -1546,6 +1569,13 @@ function _renderInner(){
   else if(S.screen===SCR.SKILL_TREE)content=skillTreePage();
   else if(S.screen===SCR.PERFORM_CALIBRATE)content=performCalibrationPage();
   else if(S.screen===SCR.PLAN)content=planPage();
+  else if(S.screen===SCR.RECOMMENDATIONS)content=typeof recommendationsPage==="function"?recommendationsPage():"";
+  else if(S.screen===SCR.CAREER)content=typeof careerPage==="function"?careerPage():"";
+  else if(S.screen===SCR.INSIGHTS)content=typeof insightsDashboardPage==="function"?insightsDashboardPage():"";
+  else if(S.screen===SCR.CHALLENGES)content=typeof challengeHubPage==="function"?challengeHubPage():"";
+  else if(S.screen===SCR.HOME_DASH)content=typeof homeDashboardPage==="function"?homeDashboardPage():"";
+  else if(S.screen===SCR.SETTINGS)content=typeof settingsPage==="function"?settingsPage():"";
+  else if(S.screen===SCR.ONBOARDING)content=typeof onboardingPage==="function"?onboardingPage():"";
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';

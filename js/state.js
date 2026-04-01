@@ -238,6 +238,47 @@ var S={
   // Release info (loaded at runtime)
   releaseInfo:null,
   releaseNotes:[],
+
+  // Recommendation engine
+  recommendations:[],
+  lastRecommendationRun:null,
+  recommendationHistory:[],
+  recommendationSettings:{preferWeakSpots:true, preferCurriculum:true, preferVariety:true, maxSuggestions:5},
+  completedLessons:[],
+
+  // Career mode
+  careerProgress:{unlockedTiers:{}, unlockedStages:{}, unlockedSongs:{}, songRatings:{}, stageCompletion:{}, tierCompletion:{}},
+  activeCareerId:"career_main",
+  activeCareerTier:null,
+  activeCareerStage:null,
+
+  // Insights / analytics dashboard
+  insightSnapshots:[],
+  personalInsights:{weakestSkills:[], strongestSkills:[], masteryTrend:{}, practiceTrend:{}, recommendationQuality:{}, careerTrend:{}, packProgress:{}},
+  lastInsightRun:null,
+
+  // Challenge system expansion
+  challengeRegistry:{},
+  activeChallenges:[],
+  seasonalEvents:[],
+  activeEventId:null,
+  packCompletion:{lessons:{}, songs:{}, drills:{}, packs:{}},
+  challengeRewards:{claimed:{}, eventClaimed:{}, packClaimed:{}},
+
+  // Home dashboard
+  homeState:{lastRefreshAt:null, cachedPlan:null, cachedRecommendations:null, cachedChallenges:null, cachedCareer:null, cachedInsights:null},
+
+  // Settings / profile / themes
+  settings:{audioLatencyMs:0, metronomeVolume:0.6, noteSpeed:1.0, difficultyAutoAdjust:true, theme:"dark", showFingerHints:true, practiceReminder:true, cloudSyncEnabled:true, uiVolume:0.5},
+  sparkProfile:{displayName:"", avatar:"default", instrumentPrimary:"guitar", instrumentSecondary:"piano", joinDate:0, totalPracticeMinutes:0, favoriteSongs:[], achievements:[]},
+  tutorialProgress:{completed:{}, skipped:{}},
+
+  // Onboarding / first-run
+  onboarding:{completed:false, startedAt:null, completedAt:null, currentStep:"welcome", instrument:null, skillLevel:null, goals:[], midiSetupDone:false, calibrationDone:false, starterContentUnlocked:false},
+  firstRun:true,
+
+  // Daily practice plan (for home dashboard)
+  dailyPracticePlan:[],
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -270,7 +311,14 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "activeMidiDeviceId","midiProfiles","activeMidiProfileId","midiRoutingMode",
   "importedMidiAssignments",
   "cloudAuth","cloudProfile","cloudSync",
-  "desktopInfo","feedbackDraft"];
+  "desktopInfo","feedbackDraft",
+  "recommendationHistory","recommendationSettings","completedLessons",
+  "careerProgress","activeCareerId","activeCareerTier","activeCareerStage",
+  "insightSnapshots","personalInsights",
+  "challengeRegistry","activeChallenges","seasonalEvents","activeEventId",
+  "packCompletion","challengeRewards",
+  "settings","sparkProfile","tutorialProgress",
+  "onboarding","firstRun","dailyPracticePlan"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;
