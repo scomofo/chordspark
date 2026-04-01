@@ -71,6 +71,11 @@ var S={
   stemFile:null,stemStatus:"idle",stemProgress:0,stemError:null,
   stemPaths:null,stemPlaying:false,stemVolume:0.8,stemCurrentTime:0,stemDuration:0,
   stemToggles:{vocals:true,drums:true,bass:true,guitar:false,piano:false,other:false},
+  // Song Audio Import
+  songAudioData:{},
+  songAudioImporting:false,
+  songAudioProgress:0,
+  songAudioImportingSongId:null,
   // Chord Runner
   runnerActive:false,runnerScore:0,runnerCombo:0,runnerMaxCombo:0,
   runnerLives:3,runnerTarget:null,runnerObstacles:[],runnerSpeed:2,
@@ -130,10 +135,6 @@ var S={
   performCalibrationHits:[],
   performanceBadges:[],
   performanceMilestoneToast:null,
-  practicePlan:null,
-  practicePlanDate:null,
-  practicePlanComplete:false,
-  practicePlanHistory:[],
   performEditorChart:null,
   performEditorDirty:false,
   performEditorSelectedEventId:null,
@@ -173,7 +174,6 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "performanceStats","performanceUnlocks","performanceBadges",
   "performMidiOffsetMs","performAudioOffsetMs","performCalibrated",
   "performanceDailyHistory",
-  "practicePlanDate","practicePlanHistory",
   "performEditorLibrary",
   "practicePlan","practicePlanDate","practicePlanHistory"];
 
