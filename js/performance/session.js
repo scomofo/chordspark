@@ -104,6 +104,7 @@ function startPerformance(chartIdOrChart, opts) {
 }
 
 function stopPerformance() {
+  destroySparkHighway();
   _performStopping = true;
   if (_performRAF) { cancelAnimationFrame(_performRAF); _performRAF = null; }
   try { PerformanceTransport.stop(); } catch(e) {}
@@ -171,7 +172,7 @@ function updatePerformanceFrame() {
   if (S.performLoop && nowSec >= S.performLoop.endSec) {
     PerformanceTransport.seek(S.performLoop.startSec);
     resetPerformanceEvents(S.performChart, S.performLoop.startSec, S.performLoop.endSec);
-    render();
+    _updatePerformDisplay();
     _performRAF = requestAnimationFrame(updatePerformanceFrame);
     return;
   }
@@ -183,8 +184,33 @@ function updatePerformanceFrame() {
     return;
   }
 
-  render();
+  _updatePerformDisplay();
   _performRAF = requestAnimationFrame(updatePerformanceFrame);
+}
+
+function _updatePerformDisplay() {
+  // Initialize canvas highway on first frame
+  var canvas = document.getElementById("spark-highway-canvas");
+  if (canvas) {
+    ensureSparkHighway(canvas);
+    feedChartToHighway(S.performChart);
+    updateSparkHighway(S.performCurrentSec, S.performCombo);
+  }
+
+  // Update score strip (targeted, no full rebuild)
+  var scoreEls = document.querySelectorAll(".perform-stat-val");
+  if (scoreEls.length >= 3) {
+    scoreEls[0].textContent = S.performScore;
+    scoreEls[1].textContent = S.performAccuracy + "%";
+    scoreEls[2].textContent = S.performCombo + "x";
+  }
+
+  // Update phrase name
+  var phraseEl = document.querySelector(".perform-phrase-name");
+  if (phraseEl) {
+    var phrase = getPerformancePhraseForTime(S.performChart, S.performCurrentSec);
+    phraseEl.textContent = phrase ? phrase.name : "";
+  }
 }
 
 function maybeScorePendingEvents(nowSec) {
