@@ -93,16 +93,39 @@ function startPerformance(chartIdOrChart, opts) {
     PerformanceInput.start(S.performMode);
     applyPerformanceStemPreset(S.performPracticePreset);
 
+    // Load stems if song has imported audio
+    var songId = (S.performSongData && S.performSongData.title || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    var audioData = S.songAudioData[songId];
+    var hasStemAudio = audioData && audioData.stemUrls && Object.keys(audioData.stemUrls).length > 0;
+
+    if (hasStemAudio) {
+      loadStemUrls(audioData.stemUrls);
+      applyPerformanceStemPreset(S.performPracticePreset);
+      if (audioData.detectedBpm && chart.bpm) {
+        chart._effectiveBpm = audioData.detectedBpm;
+      }
+    }
+
     S.screen = SCR.PERFORM;
 
     if (S.performCountIn) {
       startPerformanceCountIn(chart, S.performSpeed, function() {
         PerformanceTransport.start(0, S.performSpeed);
+        if (hasStemAudio) {
+          playStems();
+          var firstStem = _stemAudios[Object.keys(_stemAudios)[0]];
+          if (firstStem) PerformanceTransport.setAudioSource(firstStem);
+        }
         render();
         _performRAF = requestAnimationFrame(updatePerformanceFrame);
       });
     } else {
       PerformanceTransport.start(0, S.performSpeed);
+      if (hasStemAudio) {
+        playStems();
+        var firstStem = _stemAudios[Object.keys(_stemAudios)[0]];
+        if (firstStem) PerformanceTransport.setAudioSource(firstStem);
+      }
       render();
       _performRAF = requestAnimationFrame(updatePerformanceFrame);
     }
@@ -116,6 +139,8 @@ function startPerformance(chartIdOrChart, opts) {
 
 function stopPerformance() {
   destroySparkHighway();
+  if (typeof cleanupStems === "function") cleanupStems();
+  PerformanceTransport.stop();
   _performStopping = true;
   if (_performRAF) { cancelAnimationFrame(_performRAF); _performRAF = null; }
   try { PerformanceTransport.stop(); } catch(e) {}
@@ -140,6 +165,7 @@ function resetPerformanceEvents(chart, rangeStartSec, rangeEndSec) {
 
 function pausePerformance() {
   PerformanceTransport.pause();
+  if (typeof pauseStems === "function") pauseStems();
   S.performPaused = true;
   S.performPlaying = false;
   if (_performRAF) { cancelAnimationFrame(_performRAF); _performRAF = null; }
@@ -150,6 +176,7 @@ function resumePerformance() {
   PerformanceTransport.resume();
   S.performPaused = false;
   S.performPlaying = true;
+  if (typeof playStems === "function") playStems();
   _performRAF = requestAnimationFrame(updatePerformanceFrame);
   render();
 }

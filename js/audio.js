@@ -787,6 +787,13 @@ function setStemVolume(vol){
   }
 }
 
+function setStemPlaybackRate(rate){
+  var keys=Object.keys(_stemAudios);
+  for(var i=0;i<keys.length;i++){
+    _stemAudios[keys[i]].playbackRate=rate;
+  }
+}
+
 function cleanupStems(){
   var keys=Object.keys(_stemAudios);
   for(var i=0;i<keys.length;i++){

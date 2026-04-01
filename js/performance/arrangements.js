@@ -4,7 +4,8 @@
     if (!perfSong || !perfSong.progression || !perfSong.progression.length) return null;
 
     var events = [];
-    var barDur = (60 / (perfSong.bpm || 100)) * 4; // 4 beats per bar
+    var effectiveBpm = perfSong._effectiveBpm || perfSong.bpm || 100;
+    var barDur = (60 / effectiveBpm) * 4; // 4 beats per bar
 
     // Each progression entry = one bar, strum on beat 1
     for (var i = 0; i < perfSong.progression.length; i++) {
@@ -84,7 +85,7 @@
   function buildRhythmChordArrangement(perfSong) {
     if (!perfSong || !perfSong.progression || !perfSong.progression.length) return null;
 
-    var bpm = perfSong.bpm || 100;
+    var bpm = perfSong._effectiveBpm || perfSong.bpm || 100;
     var barDur = (60 / bpm) * 4;
     var pattern = perfSong.pattern || ["D","D","U","U","D","U"];
     var events = [];
