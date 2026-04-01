@@ -1616,7 +1616,30 @@ document.addEventListener("keydown",function(e){
     if(S.screen===SCR.SESSION){act("toggleTimer");return;}
     if(S.screen===SCR.STRUM){act("toggleStrum");return;}
     if(S.screen===SCR.SONG){act("toggleSong");return;}
-    if(S.screen===SCR.PERFORM){if(S.performPaused)act("resumePerform");else act("pausePerform");return;}
+    if(S.screen===SCR.PERFORM){
+      if(S.performPaused){act("resumePerform");return;}
+      // Spacebar = simulate strum hit (injects matching notes for testing)
+      if(S.performPlaying && S.performChart){
+        var nowSec=PerformanceTransport.now();
+        var chart=S.performChart;
+        for(var si=0;si<chart.events.length;si++){
+          var evt=chart.events[si];
+          if(evt._scored)continue;
+          var delta=Math.abs(nowSec-evt.t)*1000;
+          if(delta<S.performWindowMissMs){
+            // Inject the target notes so scoring picks them up
+            var targetNotes=evt.notes||[];
+            if(evt.target&&evt.target.notes)targetNotes=evt.target.notes;
+            if(evt.target&&Array.isArray(evt.target.midi))targetNotes=evt.target.midi.map(function(m){return midiToNote?midiToNote(m):"C";});
+            if(evt.chord)targetNotes=[evt.chord];
+            if(targetNotes.length)PerformanceInput.latestPitchClasses=targetNotes.slice();
+            else PerformanceInput.latestPitchClasses=["C","E","G"];
+            break;
+          }
+        }
+      }
+      return;
+    }
     if(S.screen===SCR.HOME&&S.tab===TAB.RHYTHM&&S.rhythmActive){act("rhythmTap");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.RUNNER&&S.runnerActive){act("runnerStrum");return;}
     if(S.screen===SCR.HOME&&S.tab===TAB.BUILD&&S.progChords.length>=2){act("progPlay");return;}
