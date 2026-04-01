@@ -188,6 +188,30 @@ var S={
   playerStats:{songsCompleted:0, lessonsCompleted:0, exercisesCompleted:0, totalPracticeMinutes:0, streakBest:0},
   xpLog:[],
   contentLibrary:{rhythmPatterns:[], lhPatterns:[], chordProgressions:[], exercises:[]},
+
+  // Meta progression: challenges, weekly goals, skill tree
+  dailyChallenges:[],
+  weeklyGoals:[],
+  skillTree:{},
+  metaProgress:{challengesCompleted:0, goalsCompleted:0, skillPoints:0},
+  challengeHistory:[],
+
+  // Analytics visualization
+  analytics:{
+    performanceHistory:[],
+    practiceHistory:[],
+    accuracyHistory:[],
+    masteryHistory:[],
+    xpHistory:[],
+    streakHistory:[]
+  },
+
+  // Audio latency calibration
+  audioLatencyMs:0,
+  inputLatencyMs:0,
+  calibrationOffsets:[],
+  timingWindows:{perfect:40, good:90, ok:150},
+  lastClickTime:0,
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -213,7 +237,10 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "weakSpots","practiceHistory","adaptiveState",
   "weeklyPracticePlan","practiceStreak","totalPracticeMinutes","todayPracticeMinutes",
   "mastery","unlocks",
-  "playerXP","playerLevel","playerAchievements","playerStats","xpLog","contentLibrary"];
+  "playerXP","playerLevel","playerAchievements","playerStats","xpLog","contentLibrary",
+  "dailyChallenges","weeklyGoals","skillTree","metaProgress","challengeHistory",
+  "analytics",
+  "audioLatencyMs","inputLatencyMs","calibrationOffsets"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;

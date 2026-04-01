@@ -16,6 +16,7 @@
   function onLevelUp(level){
     if(typeof showToast === "function") showToast("Level Up! Level " + level);
     if(typeof evaluateAchievements === "function") evaluateAchievements();
+    if(typeof awardSkillPoint === "function") awardSkillPoint();
   }
 
   function getLevelProgress(){
