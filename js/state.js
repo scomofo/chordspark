@@ -50,7 +50,7 @@ var S={
   // Audio Input
   audioInputId:"",audioInputDevices:[],audioTestLevel:0,audioTestingId:"",
   // MIDI Output
-  midiEnabled:false,midiOutput:null,midiOutputId:"",midiDevices:[],
+  midiEnabled:false,midiOutput:null,midiOutputId:"",
   // ADHD-friendly
   xpToast:null,sessionStartTime:0,breakDismissed:false,
   lastChordName:"",focusMode:false,microToast:null,sessionMicros:[],

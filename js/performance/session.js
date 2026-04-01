@@ -113,7 +113,7 @@ function startPerformance(chartIdOrChart, opts) {
         PerformanceTransport.start(0, S.performSpeed);
         if (hasStemAudio) {
           playStems();
-          var firstStem = _stemAudios[Object.keys(_stemAudios)[0]];
+          var firstStem = typeof getFirstStemAudio === "function" ? getFirstStemAudio() : null;
           if (firstStem) PerformanceTransport.setAudioSource(firstStem);
         }
         render();
@@ -123,7 +123,7 @@ function startPerformance(chartIdOrChart, opts) {
       PerformanceTransport.start(0, S.performSpeed);
       if (hasStemAudio) {
         playStems();
-        var firstStem = _stemAudios[Object.keys(_stemAudios)[0]];
+        var firstStem = typeof getFirstStemAudio === "function" ? getFirstStemAudio() : null;
         if (firstStem) PerformanceTransport.setAudioSource(firstStem);
       }
       render();

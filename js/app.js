@@ -1576,6 +1576,10 @@ function _renderInner(){
   else if(S.screen===SCR.HOME_DASH)content=typeof homeDashboardPage==="function"?homeDashboardPage():"";
   else if(S.screen===SCR.SETTINGS)content=typeof settingsPage==="function"?settingsPage():"";
   else if(S.screen===SCR.ONBOARDING)content=typeof onboardingPage==="function"?onboardingPage():"";
+  else if(S.screen===SCR.MIDI_SETTINGS)content=typeof midiSettingsPage==="function"?midiSettingsPage():"";
+  else if(S.screen===SCR.MIDI_IMPORT)content=typeof midiImportPage==="function"?midiImportPage():"";
+  else if(S.screen===SCR.CLOUD_SETTINGS)content=typeof cloudSettingsPage==="function"?cloudSettingsPage():"";
+  else if(S.screen===SCR.CURRICULUM)content=typeof curriculumPage==="function"?curriculumPage():"";
 
   if(screenKey!==_lastScreen){
     h+='<div class="page-transition">'+content+'</div>';
