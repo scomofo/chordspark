@@ -84,6 +84,37 @@ function performSongPage() {
     }
   }
 
+  // Audio import
+  var songId = (song.title || "song").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  var audioData = S.songAudioData[songId];
+
+  h += '<div class="card mb20">';
+  h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">Song Audio</div>';
+
+  if (audioData && audioData.stemPaths) {
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    h += '<span style="color:#4ECDC4;font-weight:700">&#9989; Audio loaded</span>';
+    if (audioData.detectedBpm) {
+      h += '<span style="font-size:11px;color:var(--text-muted)">Detected BPM: ' + Math.round(audioData.detectedBpm) + '</span>';
+      var authored = song.bpm || 100;
+      var diff = Math.abs(audioData.detectedBpm - authored) / authored;
+      if (diff > 0.1) {
+        h += '<span style="font-size:11px;color:#FF6B6B"> (authored: ' + authored + ' — sync may be imperfect)</span>';
+      }
+    }
+    h += '</div>';
+    h += '<button class="btn btn-sm" onclick="act(\'removeSongAudio\',\'' + songId + '\')" style="background:var(--input-bg);color:var(--text-secondary)">Remove Audio</button>';
+  } else if (S.songAudioImporting) {
+    h += '<div style="margin-bottom:8px">';
+    h += '<div style="font-size:13px;color:var(--text-primary);margin-bottom:4px">Separating stems... ' + (S.songAudioProgress || 0) + '%</div>';
+    h += '<div style="background:var(--input-bg);border-radius:4px;height:6px;overflow:hidden"><div style="width:' + (S.songAudioProgress || 0) + '%;height:100%;background:#4ECDC4;transition:width .3s"></div></div>';
+    h += '</div>';
+  } else {
+    h += '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Import an MP3 to play along with the actual song during performance.</p>';
+    h += '<button class="btn" onclick="act(\'importSongAudio\',\'' + songId + '\')" style="background:linear-gradient(135deg,#45B7D1,#4ECDC4);color:#fff">&#127925; Import Song Audio</button>';
+  }
+  h += '</div>';
+
   // Start buttons
   h += '<div class="flex-col" style="gap:8px">';
   h += '<button class="btn" onclick="act(\'performStartFromSong\')" style="background:linear-gradient(135deg,#FF6B6B,#FF8A5C);color:#fff;padding:14px;font-size:16px;font-weight:800">&#127918; Start Performance</button>';

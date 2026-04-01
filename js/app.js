@@ -1290,6 +1290,71 @@ window.act=function(a,v){
     S.tab=TAB.SONGS;S.screen=SCR.HOME;render();return;
   }
   if(a==="performArrangement"){S.performArrangementType=v||"chords";saveState();render();return;}
+  if(a==="importSongAudio"){
+    if(!window.electron||!window.electron.stems){alert("Stem separation requires the desktop app.");return;}
+    var importSongId=v;
+    window.electron.stems.openFile().then(function(result){
+      if(!result)return;
+      S.songAudioImporting=true;
+      S.songAudioProgress=0;
+      S.songAudioImportingSongId=importSongId;
+      render();
+
+      var unsubProgress=window.electron.stems.onProgress(function(data){
+        if(data&&data.progress!=null){
+          S.songAudioProgress=Math.round(data.progress);
+          render();
+        }
+      });
+
+      window.electron.stems.checkCache(result.filePath).then(function(cached){
+        if(cached){
+          return cached;
+        }
+        return window.electron.stems.separate(result.filePath);
+      }).then(function(stemPaths){
+        unsubProgress();
+        if(!stemPaths){S.songAudioImporting=false;render();return;}
+
+        var stemNames=Object.keys(stemPaths);
+        var urlMap={};
+
+        function loadNextUrl(idx){
+          if(idx>=stemNames.length){
+            S.songAudioData[importSongId]={
+              mp3Path:result.filePath,
+              detectedBpm:null,
+              stemPaths:stemPaths,
+              stemUrls:urlMap,
+              importedAt:new Date().toISOString()
+            };
+            S.songAudioImporting=false;
+            S.songAudioProgress=0;
+            saveState();
+            render();
+            return;
+          }
+          var name=stemNames[idx];
+          window.electron.stems.getFileUrl(stemPaths[name]).then(function(url){
+            urlMap[name]=url;
+            loadNextUrl(idx+1);
+          });
+        }
+        loadNextUrl(0);
+      }).catch(function(err){
+        unsubProgress();
+        S.songAudioImporting=false;
+        S.songAudioProgress=0;
+        alert("Stem separation failed: "+(err.message||err));
+        render();
+      });
+    });
+    return;
+  }
+  if(a==="removeSongAudio"){
+    delete S.songAudioData[v];
+    saveState();render();return;
+  }
   if(a==="performStartFromSong"){
     if(S.performSongData){
       var chart=buildPerformanceChartFromSong(S.performSongData,"builtin",S.performArrangementType);
