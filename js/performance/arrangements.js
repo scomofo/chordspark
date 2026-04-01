@@ -4,9 +4,9 @@
     if (!perfSong || !perfSong.progression || !perfSong.progression.length) return null;
 
     var events = [];
-    var beatDur = 60 / (perfSong.bpm || 100);
+    var barDur = (60 / (perfSong.bpm || 100)) * 4; // 4 beats per bar
 
-    // Look up chord notes from existing CHORD_NOTES if available
+    // Each progression entry = one bar, strum on beat 1
     for (var i = 0; i < perfSong.progression.length; i++) {
       var chord = perfSong.progression[i];
       var notes = [];
@@ -15,8 +15,8 @@
       }
       events.push({
         id: i + 1,
-        t: i * beatDur,
-        dur: beatDur,
+        t: i * barDur,
+        dur: barDur,
         type: "chord",
         chord: chord,
         laneLabel: chord,

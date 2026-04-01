@@ -350,54 +350,136 @@ SparkHighway.prototype._drawNotes = function(ctx, currentTime) {
     // Skip scored misses
     if (evt._scored && !evt._hit) continue;
 
-    // Extract MIDI note from various event formats
+    var widthScale = this._w / 1280;
+
+    // Chord/strum events render as labeled bars spanning the highway
+    var isChord = (evt.type === "chord" || evt.type === "strum" || evt.type === "block_chord");
+    if (isChord && skin.laneIndicatorStyle !== "keys") {
+      var proj = projectNote(0, yProg, this._cx, this._horizonY, this._hitLineY, this._pf);
+      var x = proj[0], y = proj[1], scale = proj[2];
+      var laneW = highwayWidthAt(Math.max(0, Math.min(1, yProg)), this._topWidth, this._bottomWidth);
+
+      // Enlarge near hit line
+      var hitBoost = 1.0;
+      if (yProg > 0.85) hitBoost = 1.0 + (yProg - 0.85) / 0.15 * 0.25;
+
+      // Pick color based on chord hash for visual variety
+      var chordStr = evt.chord || evt.laneLabel || "";
+      var hash = 0;
+      for (var ci = 0; ci < chordStr.length; ci++) hash = (hash + chordStr.charCodeAt(ci)) % skin.laneColors.length;
+      var color = (evt._scored && evt._hit) ? [100, 255, 100] : skin.laneColors[hash];
+
+      this._drawChordBar(ctx, x, y, laneW * 0.85 * scale, scale, color, chordStr, evt.strum, hitBoost);
+
+      evt._screenX = x;
+      evt._screenY = y;
+      evt._screenColor = color;
+      continue;
+    }
+
+    // Individual note events (piano keys, lead notes, etc.)
     var midiNote = _extractMidi(evt);
 
-    // Determine lane offset
     var laneOff;
-    var widthScale = this._w / 1280;
     if (skin.laneIndicatorStyle === "keys") {
-      // Piano: offset from center note
       var center = skin.centerNote || 60;
       laneOff = (midiNote - center) * skin.laneSpacing * widthScale;
     } else {
-      // Guitar: distribute events across lanes by index or chord hash
       var lane = (evt.lane != null) ? evt.lane : (evt.id != null ? evt.id % skin.laneCount : i % skin.laneCount);
       var laneCenter = (skin.laneCount - 1) / 2;
       laneOff = (lane - laneCenter) * skin.laneSpacing * widthScale;
     }
 
-    var proj = projectNote(laneOff, yProg, this._cx, this._horizonY, this._hitLineY, this._pf);
-    var x = proj[0], y = proj[1], scale = proj[2];
+    var proj2 = projectNote(laneOff, yProg, this._cx, this._horizonY, this._hitLineY, this._pf);
+    var x2 = proj2[0], y2 = proj2[1], scale2 = proj2[2];
 
-    // Color
-    var color;
+    var color2;
     if (evt._scored && evt._hit) {
-      color = [100, 255, 100];
+      color2 = [100, 255, 100];
     } else if (skin.laneColors) {
       var laneIdx = (evt.lane != null) ? evt.lane : (evt.id != null ? evt.id % skin.laneColors.length : i % skin.laneColors.length);
-      color = skin.laneColors[laneIdx % skin.laneColors.length];
+      color2 = skin.laneColors[laneIdx % skin.laneColors.length];
     } else {
-      // Piano: white vs black key color
       var inOctave = midiNote % 12;
       var isBlack = [1, 3, 6, 8, 10].indexOf(inOctave) >= 0;
-      color = isBlack ? [80, 160, 255] : [100, 200, 255];
+      color2 = isBlack ? [80, 160, 255] : [100, 200, 255];
     }
 
-    // Draw gem
+    var hitBoost2 = 1.0;
+    if (yProg > 0.85) hitBoost2 = 1.0 + (yProg - 0.85) / 0.15 * 0.35;
+
     if (skin.noteShape === "rect") {
-      var nw = Math.max(6, Math.round(skin.laneSpacing * 0.8 * scale * widthScale));
-      var nh = Math.max(4, Math.round(20 * scale));
-      this._drawRectGem(ctx, x, y, nw, nh, color, scale);
+      var nw = Math.max(6, Math.round(skin.laneSpacing * 0.8 * scale2 * widthScale * hitBoost2));
+      var nh = Math.max(4, Math.round(20 * scale2 * hitBoost2));
+      this._drawRectGem(ctx, x2, y2, nw, nh, color2, scale2);
     } else {
-      var radius = Math.max(4, Math.round(18 * scale));
-      this._drawCircleGem(ctx, x, y, radius, color, scale);
+      var radius = Math.max(4, Math.round(18 * scale2 * hitBoost2));
+      this._drawCircleGem(ctx, x2, y2, radius, color2, scale2);
     }
 
-    // Store screen position for hit particles
-    evt._screenX = x;
-    evt._screenY = y;
-    evt._screenColor = color;
+    evt._screenX = x2;
+    evt._screenY = y2;
+    evt._screenColor = color2;
+  }
+};
+
+/* ── Draw: Chord bar (labeled bar spanning highway) ── */
+SparkHighway.prototype._drawChordBar = function(ctx, cx, y, barW, scale, color, label, strum, hitBoost) {
+  var r = color[0], g = color[1], b = color[2];
+  var barH = Math.max(12, Math.round(22 * scale * hitBoost));
+  var rx = cx - barW / 2;
+  var ry = y - barH / 2;
+  var br = Math.min(barH / 2, 8);
+
+  // Glow
+  ctx.shadowColor = "rgb(" + r + "," + g + "," + b + ")";
+  ctx.shadowBlur = 16 * scale;
+  ctx.fillStyle = "rgba(" + r + "," + g + "," + b + ",0.15)";
+  _roundRect(ctx, rx - 6, ry - 4, barW + 12, barH + 8, br + 3);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Main bar with gradient
+  var grad = ctx.createLinearGradient(rx, ry, rx, ry + barH);
+  grad.addColorStop(0, "rgb(" + Math.min(255, r + 40) + "," + Math.min(255, g + 40) + "," + Math.min(255, b + 40) + ")");
+  grad.addColorStop(1, "rgb(" + r + "," + g + "," + b + ")");
+  ctx.fillStyle = grad;
+  _roundRect(ctx, rx, ry, barW, barH, br);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 1.5;
+  _roundRect(ctx, rx, ry, barW, barH, br);
+  ctx.stroke();
+
+  // Strum direction arrow (left side)
+  if (strum && scale > 0.4) {
+    var arrowX = rx + 14 * scale;
+    var arrowY = y;
+    var arrowSize = 6 * scale * hitBoost;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    if (strum === "U" || strum === "up") {
+      ctx.moveTo(arrowX, arrowY - arrowSize);
+      ctx.lineTo(arrowX - arrowSize * 0.6, arrowY + arrowSize * 0.5);
+      ctx.lineTo(arrowX + arrowSize * 0.6, arrowY + arrowSize * 0.5);
+    } else {
+      ctx.moveTo(arrowX, arrowY + arrowSize);
+      ctx.lineTo(arrowX - arrowSize * 0.6, arrowY - arrowSize * 0.5);
+      ctx.lineTo(arrowX + arrowSize * 0.6, arrowY - arrowSize * 0.5);
+    }
+    ctx.fill();
+  }
+
+  // Chord label (centered)
+  if (label && scale > 0.3) {
+    var fontSize = Math.max(9, Math.round(14 * scale * hitBoost));
+    ctx.font = "bold " + fontSize + "px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.fillText(label, cx, y + 1);
   }
 };
 
@@ -470,28 +552,36 @@ SparkHighway.prototype._drawRectGem = function(ctx, x, y, w, h, color, scale) {
 
 /* ── Draw: Strike line ── */
 SparkHighway.prototype._drawStrikeLine = function(ctx) {
-  var halfW = this._bottomWidth / 2 + 30;
+  var halfW = this._bottomWidth / 2 + 40;
   var y = this._hitLineY;
 
-  // Thick glow
-  ctx.strokeStyle = "rgba(100,200,255,0.2)";
-  ctx.lineWidth = 8;
+  // Widest outer glow
+  ctx.strokeStyle = "rgba(100,200,255,0.08)";
+  ctx.lineWidth = 28;
+  ctx.beginPath();
+  ctx.moveTo(this._cx - halfW, y);
+  ctx.lineTo(this._cx + halfW, y);
+  ctx.stroke();
+
+  // Wide glow
+  ctx.strokeStyle = "rgba(100,200,255,0.15)";
+  ctx.lineWidth = 16;
   ctx.beginPath();
   ctx.moveTo(this._cx - halfW, y);
   ctx.lineTo(this._cx + halfW, y);
   ctx.stroke();
 
   // Medium glow
-  ctx.strokeStyle = "rgba(100,200,255,0.5)";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(100,200,255,0.4)";
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.moveTo(this._cx - halfW, y);
   ctx.lineTo(this._cx + halfW, y);
   ctx.stroke();
 
-  // Bright center
-  ctx.strokeStyle = "rgba(200,240,255,0.9)";
-  ctx.lineWidth = 1.5;
+  // Bright core
+  ctx.strokeStyle = "rgba(220,245,255,0.95)";
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.moveTo(this._cx - halfW, y);
   ctx.lineTo(this._cx + halfW, y);

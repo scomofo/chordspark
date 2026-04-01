@@ -111,7 +111,7 @@ function performPage() {
   // Count-in overlay
   if (S.performCountdownActive && S.performCountdownBeats > 0) {
     h += '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:20;background:rgba(0,0,0,.6);pointer-events:none">';
-    h += '<div style="font-size:72px;font-weight:900;color:#FFE66D;text-shadow:0 4px 20px rgba(0,0,0,.5);animation:bn .3s ease">' + S.performCountdownBeats + '</div>';
+    h += '<div data-count-in style="font-size:72px;font-weight:900;color:#FFE66D;text-shadow:0 4px 20px rgba(0,0,0,.5)">' + S.performCountdownBeats + '</div>';
     h += '</div>';
   }
 

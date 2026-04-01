@@ -9,25 +9,36 @@ function startPerformanceCountIn(chart, speed, onDone) {
   var beats = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.countInBeats : 4;
   S.performCountdownActive = true;
   S.performCountdownBeats = beats;
-  render();
+  render(); // initial page build
 
-  function tick() {
-    S.performCountdownBeats--;
-    // Play metronome click if sound is on
+  // Use setInterval anchored to a fixed start time for consistent beats
+  var startTime = performance.now();
+  var beatIndex = 0;
+
+  var countInTimer = setInterval(function() {
+    beatIndex++;
+    S.performCountdownBeats = beats - beatIndex;
+
     if (S.soundOn && typeof metroClick === "function") {
       metroClick(S.performCountdownBeats === 0);
     }
-    if (S.performCountdownBeats <= 0) {
-      S.performCountdownActive = false;
-      render();
-      onDone();
-    } else {
-      render();
-      setTimeout(tick, beatMs);
-    }
-  }
 
-  setTimeout(tick, beatMs);
+    // Update just the countdown number, not the whole page
+    var countEl = document.querySelector("[data-count-in]");
+    if (countEl) {
+      if (S.performCountdownBeats > 0) {
+        countEl.textContent = S.performCountdownBeats;
+      } else {
+        countEl.parentElement.style.display = "none";
+      }
+    }
+
+    if (S.performCountdownBeats <= 0) {
+      clearInterval(countInTimer);
+      S.performCountdownActive = false;
+      onDone();
+    }
+  }, beatMs);
 }
 
 function startPerformance(chartIdOrChart, opts) {
