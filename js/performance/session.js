@@ -5,40 +5,73 @@ var _performStopping = false;
 
 function startPerformanceCountIn(chart, speed, onDone) {
   var bpm = chart.bpm || 90;
-  var beatMs = (60000 / bpm) / (speed || 1);
+  var beatSec = (60 / bpm) / (speed || 1);
   var beats = (typeof PERFORMANCE_CONFIG !== "undefined") ? PERFORMANCE_CONFIG.countInBeats : 4;
   S.performCountdownActive = true;
   S.performCountdownBeats = beats;
-  render(); // initial page build
+  render();
 
-  // Use setInterval anchored to a fixed start time for consistent beats
-  var startTime = performance.now();
-  var beatIndex = 0;
+  // Use Web Audio API scheduler for sample-accurate beat timing
+  var ctx = null;
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
 
-  var countInTimer = setInterval(function() {
-    beatIndex++;
-    S.performCountdownBeats = beats - beatIndex;
+  function scheduleClick(time, accent) {
+    if (!ctx) return;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = accent ? 1200 : 800;
+    osc.type = "square";
+    gain.gain.setValueAtTime(accent ? 0.3 : 0.15, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc.start(time);
+    osc.stop(time + 0.08);
+  }
 
-    if (S.soundOn && typeof metroClick === "function") {
-      metroClick(S.performCountdownBeats === 0);
+  // Schedule all beats upfront for perfect timing
+  var startAudioTime = ctx ? ctx.currentTime + 0.05 : 0;
+  var startWallTime = performance.now() + 50;
+
+  for (var i = 0; i < beats; i++) {
+    if (ctx && S.soundOn) {
+      scheduleClick(startAudioTime + i * beatSec, i === 0);
     }
+  }
 
-    // Update just the countdown number, not the whole page
-    var countEl = document.querySelector("[data-count-in]");
-    if (countEl) {
-      if (S.performCountdownBeats > 0) {
-        countEl.textContent = S.performCountdownBeats;
-      } else {
-        countEl.parentElement.style.display = "none";
+  // Visual updates via requestAnimationFrame polling (non-blocking)
+  var countInActive = true;
+  function updateCountInVisual() {
+    if (!countInActive) return;
+    var elapsed = (performance.now() - startWallTime) / 1000;
+    var currentBeat = Math.floor(elapsed / beatSec);
+    var remaining = beats - currentBeat;
+
+    if (remaining !== S.performCountdownBeats && remaining >= 0) {
+      S.performCountdownBeats = remaining;
+      var countEl = document.querySelector("[data-count-in]");
+      if (countEl) {
+        if (remaining > 0) {
+          countEl.textContent = remaining;
+          countEl.style.transform = "scale(1.2)";
+          setTimeout(function() { if (countEl) countEl.style.transform = "scale(1)"; }, 100);
+        } else {
+          countEl.parentElement.style.display = "none";
+        }
       }
     }
 
-    if (S.performCountdownBeats <= 0) {
-      clearInterval(countInTimer);
+    if (elapsed >= beats * beatSec) {
+      countInActive = false;
       S.performCountdownActive = false;
+      S.performCountdownBeats = 0;
+      if (ctx) { try { ctx.close(); } catch(e) {} }
       onDone();
+      return;
     }
-  }, beatMs);
+    requestAnimationFrame(updateCountInVisual);
+  }
+  requestAnimationFrame(updateCountInVisual);
 }
 
 function startPerformance(chartIdOrChart, opts) {
