@@ -154,6 +154,32 @@ var S={
   practicePlanComplete:false,
   practicePlanHistory:[],
   practicePlanFocus:"",
+
+  // Brain systems - weak spots, adaptive, practice
+  weakSpots:{},
+  practiceHistory:[],
+  adaptiveState:{},
+  weeklyPracticePlan:null,
+  practiceStreak:0,
+  totalPracticeMinutes:0,
+  todayPracticeMinutes:0,
+
+  // Mastery & progression
+  mastery:{
+    chords:{},
+    transitions:{},
+    rhythm:{},
+    scales:{},
+    fingers:{},
+    songs:{},
+    lessons:{}
+  },
+  unlocks:{
+    lessons:{},
+    songs:{},
+    exercises:{}
+  },
+  progressionTree:null,
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -175,7 +201,10 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "performMidiOffsetMs","performAudioOffsetMs","performCalibrated",
   "performanceDailyHistory",
   "performEditorLibrary",
-  "practicePlan","practicePlanDate","practicePlanHistory"];
+  "practicePlan","practicePlanDate","practicePlanHistory",
+  "weakSpots","practiceHistory","adaptiveState",
+  "weeklyPracticePlan","practiceStreak","totalPracticeMinutes","todayPracticeMinutes",
+  "mastery","unlocks"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;

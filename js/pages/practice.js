@@ -263,3 +263,42 @@ function earTrainPage(){
   h+='</div>';
   return h;
 }
+
+// ===== PRACTICE PLAN PAGE (Brain System) =====
+function practicePage(){
+  if(!S.practicePlan) generateDailyPracticePlan();
+
+  var stats = getPracticeStats();
+  var plan = S.practicePlan;
+
+  var h = '<div class="card mb16">';
+  h += '<div><b>Practice Stats</b></div>';
+  h += '<div>Streak: '+stats.streak+' days</div>';
+  h += '<div>Today: '+stats.todayMinutes+' min</div>';
+  h += '<div>Total: '+stats.totalMinutes+' min</div>';
+  h += '</div>';
+
+  h += '<div class="card mb16">';
+  h += '<div><b>Today\'s Practice Plan</b></div>';
+  for(var i=0;i<plan.items.length;i++){
+    var item = plan.items[i];
+    h += '<div class="row">';
+    h += '<span>'+escHTML(item.type)+'</span>';
+    h += '<button onclick="act(\'practiceStartItem\', \''+item.id+'\')">'+(item.completed?'Done':'Start')+'</button>';
+    h += '</div>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
+function startPracticeItem(id){
+  var plan = S.practicePlan;
+  if(!plan) return;
+  for(var i=0;i<plan.items.length;i++){
+    if(plan.items[i].id === id){
+      launchPracticeItem(plan.items[i]);
+      return;
+    }
+  }
+}
