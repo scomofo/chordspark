@@ -12,5 +12,9 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.on('stems:progress', handler);
       return function() { ipcRenderer.removeListener('stems:progress', handler); };
     }
+  },
+  sparkgame: {
+    launch: function(chartData) { return ipcRenderer.invoke('sparkgame:launch', chartData); },
+    charter: function(mp3Path, instrument, difficulty) { return ipcRenderer.invoke('sparkgame:charter', mp3Path, instrument, difficulty); }
   }
 });

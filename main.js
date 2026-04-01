@@ -198,6 +198,73 @@ ipcMain.handle('stems:getFileUrl', async (event, stemPath) => {
   return 'file://' + normalized.replace(/\\/g, '/');
 });
 
+// ===== SPARKGAME INTEGRATION =====
+
+var sparkGameProcess = null;
+
+ipcMain.handle('sparkgame:launch', async (event, chartData) => {
+  var tmpDir = app.getPath('temp');
+  var chartPath = path.join(tmpDir, 'spark_chart.json');
+  var resultsPath = path.join(tmpDir, 'spark_results.json');
+
+  // Write chart JSON
+  require('fs').writeFileSync(chartPath, JSON.stringify(chartData, null, 2), 'utf-8');
+
+  // Remove old results
+  try { require('fs').unlinkSync(resultsPath); } catch(e) {}
+
+  return new Promise((resolve, reject) => {
+    sparkGameProcess = spawn('python', ['-m', 'spark_game', '--chart', chartPath, '--results', resultsPath], {
+      cwd: path.resolve(__dirname, '..', '..', 'sparkgame'),
+      windowsHide: false
+    });
+
+    sparkGameProcess.on('close', (code) => {
+      sparkGameProcess = null;
+      // Read results
+      try {
+        var resultsJson = require('fs').readFileSync(resultsPath, 'utf-8');
+        resolve(JSON.parse(resultsJson));
+      } catch(e) {
+        resolve(null);
+      }
+    });
+
+    sparkGameProcess.on('error', (err) => {
+      sparkGameProcess = null;
+      reject(err.message);
+    });
+  });
+});
+
+ipcMain.handle('sparkgame:charter', async (event, mp3Path, instrument, difficulty) => {
+  var outputPath = mp3Path.replace(/\.[^.]+$/, '_' + instrument + '_' + difficulty + '.json');
+
+  return new Promise((resolve, reject) => {
+    var proc = spawn('python', ['-m', 'spark_charter', mp3Path, '--instrument', instrument, '--difficulty', difficulty, '--output', outputPath], {
+      cwd: path.resolve(__dirname, '..', '..', 'sparkgame'),
+      windowsHide: true
+    });
+
+    var stdout = '';
+    proc.stdout.on('data', (d) => { stdout += d; });
+    proc.stderr.on('data', (d) => { stdout += d; });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        try {
+          var chart = JSON.parse(require('fs').readFileSync(outputPath, 'utf-8'));
+          resolve(chart);
+        } catch(e) {
+          resolve(null);
+        }
+      } else {
+        reject('Charter failed: ' + stdout);
+      }
+    });
+  });
+});
+
 // ===== APP LIFECYCLE =====
 
 app.whenReady().then(createWindow);
