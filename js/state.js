@@ -212,6 +212,32 @@ var S={
   calibrationOffsets:[],
   timingWindows:{perfect:40, good:90, ok:150},
   lastClickTime:0,
+
+  // MIDI Device Mapping + Profiles (Phase 1)
+  midiDevices:[],              // discovered each session, not persisted
+  activeMidiDeviceId:null,
+  midiProfiles:{},
+  activeMidiProfileId:null,
+  midiRoutingMode:"default",   // default | guitar | piano | custom
+
+  // MIDI Import (Phase 2)
+  importedMidi:null,
+  importedMidiTracks:[],
+  importedMidiAssignments:{},
+  importedMidiSeedPreview:null,
+
+  // Cloud Sync + Accounts (Phase 5)
+  cloudAuth:{userId:null, email:null, token:null, loggedIn:false},
+  cloudProfile:{displayName:"", createdAt:null, updatedAt:null},
+  cloudSync:{lastSyncAt:null, lastSyncStatus:"idle", dirtyKeys:[], syncEnabled:true},
+
+  // Desktop Info (Phase 6)
+  desktopInfo:{channel:"dev", version:"dev", buildNumber:0, lastUpdateCheckAt:null, updateStatus:"idle", lastBackupAt:null},
+  feedbackDraft:{text:"", email:""},
+
+  // Release info (loaded at runtime)
+  releaseInfo:null,
+  releaseNotes:[],
 };
 
 var T={session:null,drill:null,daily:null,song:null,strum:null,metro:null,undo:null,rhythm:null,prog:null};
@@ -240,7 +266,11 @@ var PERSIST_FIELDS=["xp","streak","sessions","drillCount","dailyDone","quizCorre
   "playerXP","playerLevel","playerAchievements","playerStats","xpLog","contentLibrary",
   "dailyChallenges","weeklyGoals","skillTree","metaProgress","challengeHistory",
   "analytics",
-  "audioLatencyMs","inputLatencyMs","calibrationOffsets"];
+  "audioLatencyMs","inputLatencyMs","calibrationOffsets",
+  "activeMidiDeviceId","midiProfiles","activeMidiProfileId","midiRoutingMode",
+  "importedMidiAssignments",
+  "cloudAuth","cloudProfile","cloudSync",
+  "desktopInfo","feedbackDraft"];
 
 // Debounced save — prevents localStorage thrashing on rapid actions (drills, quizzes)
 var _saveTimer=null;

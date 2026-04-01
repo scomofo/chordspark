@@ -10,7 +10,18 @@ var SCR={
   PERF_EDITOR:"perfEditor",
   SKILL_TREE:"skillTree",
   PLAN:"practicePlan",
-  PERFORM_CALIBRATE:"perfCalibrate"
+  PERFORM_CALIBRATE:"perfCalibrate",
+  MIDI_SETTINGS:"midi_settings",
+  MIDI_IMPORT:"midi_import",
+  CLOUD_SETTINGS:"cloud_settings",
+  CURRICULUM:"curriculum",
+  RECOMMENDATIONS:"recommendations",
+  CAREER:"career",
+  INSIGHTS:"insights",
+  CHALLENGES:"challenges",
+  HOME_DASH:"homeDash",
+  SETTINGS:"settings",
+  ONBOARDING:"onboarding"
 };
 var TAB={
   PRACTICE:"practice",DRILL:"drill",DAILY:"daily",QUIZ:"quiz",

@@ -1410,6 +1410,46 @@ window.act=function(a,v){
     return;
   }
   if(a==="completePlanItem"){if(typeof markPracticePlanItem==="function")markPracticePlanItem(v);render();return;}
+  // === MIDI Device/Profile Actions ===
+  if(a==="setMidiDevice"){S.activeMidiDeviceId=v;saveState();render();return;}
+  if(a==="setMidiProfile"){if(typeof setActiveMidiProfile==="function")setActiveMidiProfile(v);render();return;}
+  if(a==="createDefaultPianoProfile"){if(typeof createDefaultPianoProfile==="function")createDefaultPianoProfile();render();return;}
+  if(a==="createDefaultGuitarProfile"){if(typeof createDefaultGuitarProfile==="function")createDefaultGuitarProfile();render();return;}
+  if(a==="openMidiSettings"){S.screen=SCR.MIDI_SETTINGS;render();return;}
+  // === MIDI Import Actions ===
+  if(a==="openMidiImport"){S.screen=SCR.MIDI_IMPORT;render();return;}
+  if(a==="importMidiFile"){if(typeof handleMidiImport==="function")handleMidiImport(v);return;}
+  if(a==="assignMidiTrack"){
+    var parts=String(v).split("|");
+    if(typeof setMidiTrackAssignment==="function")setMidiTrackAssignment(parts[0],parts[1]);
+    render();return;
+  }
+  if(a==="buildMidiSeedChart"){
+    if(typeof buildSeedChartFromImportedMidi==="function"){
+      var chart=buildSeedChartFromImportedMidi(S.importedMidi,S.importedMidiAssignments,v);
+      S.importedMidiSeedPreview=chart;
+      if(chart&&typeof openEditor==="function"){openEditor("chart",chart);}
+      else{render();}
+    }return;
+  }
+  // === Cloud Sync Actions ===
+  if(a==="cloudSync"){if(typeof syncSparkNow==="function")syncSparkNow();return;}
+  if(a==="cloudPull"){if(typeof pullSparkCloud==="function")pullSparkCloud();return;}
+  if(a==="cloudLogout"){if(typeof logoutSpark==="function")logoutSpark();render();return;}
+  if(a==="cloudLoginPrompt"){
+    var email=prompt("Email:");
+    var password=prompt("Password:");
+    if(email&&password&&typeof loginSpark==="function"){
+      loginSpark(email,password).then(function(){render();});
+    }return;
+  }
+  if(a==="openCloudSettings"){S.screen=SCR.CLOUD_SETTINGS;render();return;}
+  // === Desktop Actions ===
+  if(a==="checkUpdates"){if(typeof checkForDesktopUpdates==="function")checkForDesktopUpdates();return;}
+  if(a==="exportBackup"){if(typeof exportFullBackupDesktopAware==="function")exportFullBackupDesktopAware();return;}
+  if(a==="exportFeedback"){if(typeof exportFeedbackDesktopAware==="function")exportFeedbackDesktopAware();return;}
+  // === Curriculum ===
+  if(a==="openCurriculum"){S.screen=SCR.CURRICULUM;render();return;}
   // === Back ===
   if(a==="back"){
     stopAllTimers();
