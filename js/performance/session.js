@@ -250,6 +250,7 @@ function maybeScorePendingEvents(nowSec) {
         evt._hit = true;
         evt._result = result;
         evt._score = result.score;
+        if (typeof notifyHighwayHit === "function") notifyHighwayHit(evt);
         updatePhraseStats(S.performPhraseStats, evt, result);
 
         S.performCombo++;
