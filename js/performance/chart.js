@@ -1,5 +1,12 @@
 /* ===== ChordSpark Performance: Chart Loader ===== */
 
+function validatePerformanceChart(chart) {
+  if (!chart) throw new Error("Invalid chart");
+  if (!chart.events || !Array.isArray(chart.events)) throw new Error("Chart missing events");
+  if (!chart.phrases || !Array.isArray(chart.phrases)) throw new Error("Chart missing phrases");
+  return true;
+}
+
 function loadPerformanceChart(chartId) {
   return fetch("data/performance_charts/" + chartId + ".json")
     .then(function(r) {
@@ -7,6 +14,7 @@ function loadPerformanceChart(chartId) {
       return r.json();
     })
     .then(function(chart) {
+      validatePerformanceChart(chart);
       return normalizePerformanceChart(chart);
     });
 }
