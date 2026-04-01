@@ -408,6 +408,26 @@ function finishPerformance() {
     }
   })();
 
+  // Standalone badge + unlock module evaluation
+  if(typeof evaluatePerformanceBadges==="function"){
+    var progKey = S.performChartId || "unknown";
+    var arrType2 = (S.performChart && S.performChart.arrangementType) || "chords";
+    var bucket = S.performanceStats && S.performanceStats[progKey] && S.performanceStats[progKey][arrType2] && S.performanceStats[progKey][arrType2][S.performDifficulty] || null;
+    var newBadges = evaluatePerformanceBadges(S.performResults, bucket);
+    if(newBadges && newBadges.length){
+      S.xp += newBadges.length * 10;
+    }
+  }
+  if(typeof applyPerformanceUnlocks==="function"){
+    var progKey3 = S.performChartId || "unknown";
+    var arrType3 = (S.performChart && S.performChart.arrangementType) || "chords";
+    var bucket3 = S.performanceStats && S.performanceStats[progKey3] && S.performanceStats[progKey3][arrType3] && S.performanceStats[progKey3][arrType3][S.performDifficulty] || null;
+    var unlockResult = applyPerformanceUnlocks(S.performResults, bucket3);
+    if(unlockResult && unlockResult.xp > 0){
+      S.xp += unlockResult.xp;
+    }
+  }
+
   saveState();
   S.screen = SCR.PERFORM_DONE;
   render();
